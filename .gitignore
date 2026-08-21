@@ -1,0 +1,9 @@
+# Ignorar arquivos de dados pesados
+*.csv
+*.zip
+*.parquet
+
+# Ignorar ambientes virtuais Python
+venv/
+.env
+__pycache__/
