@@ -1,0 +1,27 @@
+# Ambiente virtual
+venv/
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Dados brutos e derivados — NUNCA versionar os microdados do INEP
+# (arquivos gigantes, 3GB+, e são dados públicos baixados externamente,
+# não faz sentido duplicar no histórico do git)
+etl/microdados_enem_2025/
+*.csv
+*.parquet
+
+# Variáveis de ambiente / segredos (chaves AWS, etc.)
+.env
+
+# Editor
+.vscode/
+.idea/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
