@@ -5,8 +5,10 @@ Ponto de entrada da API. Aqui só vive a inicialização do FastAPI,
 o CORS e as rotas — a validação de dados fica em schemas.py.
 """
 
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 try:
     # Funciona quando você roda de dentro da pasta api/:
@@ -78,3 +80,12 @@ def analise_genero(filtros: FiltroGenero):
         mensagem="Dados simulados retornados com sucesso (mock).",
         dados=dados_mock,
     )
+
+
+# ---------------------------------------------------------------------------
+# Frontend estático: se a pasta 'static' existir (gerada pelo build Docker),
+# serve os arquivos compilados do React na raiz.
+# ---------------------------------------------------------------------------
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
