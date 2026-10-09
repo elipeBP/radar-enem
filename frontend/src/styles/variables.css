@@ -1,32 +1,25 @@
 
 :root {
-  /* Cores principais */
   --color-primary: #2563eb;
   --color-primary-hover: #1d4ed8;
 
-  /* Cores de texto */
   --color-text-primary: #0f172a;
   --color-text-secondary: #64748b;
 
-  /* Fundos */
   --color-background: #f1f5f9;
   --color-surface: #ffffff;
   --color-surface-secondary: #f8fafc;
 
-  /* Sidebar */
   --color-sidebar: #0f172a;
   --color-sidebar-input: #1e293b;
   --color-sidebar-border: #475569;
 
-  /* Feedback */
   --color-success: #22c55e;
   --color-warning: #eab308;
   --color-error: #ef4444;
 
-  /* Bordas */
   --color-border: #e2e8f0;
 
-  /* Espaçamentos e formas */
   --radius-card: 12px;
   --radius-input: 8px;
 }
