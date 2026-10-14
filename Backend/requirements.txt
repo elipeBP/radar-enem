@@ -2,4 +2,5 @@ fastapi
 uvicorn[standard]
 pydantic
 polars
-aiofiles
+aiofiles
+pytest

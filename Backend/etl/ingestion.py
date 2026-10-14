@@ -1,111 +1,139 @@
 """
 etl/ingestion.py
 -----------------
-Script de extração/ingestão dos microdados do ENEM usando Polars.
+Versao de PRODUCAO da ingestao dos microdados do ENEM (ticket #34).
 
-Por que Polars e não Pandas?
-- Pandas carrega o DataFrame inteiro na memória RAM de uma vez, e os
-  microdados do INEP têm 3GB+ (às vezes bem mais, dependendo do ano).
-  Isso trava máquinas comuns (OOM = Out Of Memory).
-- Polars é escrito em Rust, processa em paralelo e tem um modo "lazy"
-  (não usado ainda aqui, mas será essencial na ingestão completa) que
-  permite processar arquivos maiores que a RAM disponível.
+Gera dois arquivos Parquet (nao um so), porque RESULTADOS_2025.csv e
+PARTICIPANTES_2025.csv tem granularidades diferentes e NAO sao juntaveis
+(confirmado oficialmente no #33/#42 -- ausencia de chave de ligacao por
+decisao de LGPD). Confirmado com o Felipe (27/09): misturar os dois num
+arquivo só seria enganoso, sem chave de junção. Entregáveis separados:
 
-Este script, por enquanto, só lê uma AMOSTRA pequena (100 linhas) pra
-validar o schema e o pipeline de ponta a ponta antes de rodar com o
-arquivo completo.
+  - resultados_2025.parquet    -> Camada 1: nota x UF (percentil real)
+  - participantes_2025.parquet -> Camada 2: composicao demografica (sem nota)
+
+As 5 notas (CN, CH, LC, MT, Redação) entram no Parquet de resultados,
+não só Matemática -- confirmado pelo Felipe: a Camada 1 é compartilhada
+por todos os módulos futuros, não só a Trilha de Gênero.
 """
 
 from pathlib import Path
 
 import polars as pl
 
-# Path(__file__) é o caminho deste próprio arquivo (ingestion.py).
-# .parent pega a pasta que o contém (etl/). Usar isso, em vez de uma
-# string solta como "microdados.csv", garante que o caminho funcione
-# não importa de onde o script seja executado (da raiz do projeto,
-# de dentro de etl/, do VS Code, etc.) — resolve o FileNotFoundError
-# que você teve.
+# --- Caminhos -----------------------------------------------------------
+
 PASTA_ETL = Path(__file__).parent
+PASTA_DADOS_BRUTOS = PASTA_ETL / "microdados_enem_2025" / "microdados_enem_2025" / "DADOS"
+PASTA_SAIDA = PASTA_ETL / "producao"
 
-# ATENÇÃO: o .zip do INEP extraiu com uma pasta duplicada dentro dela
-# mesma (microdados_enem_2025/microdados_enem_2025/...) — isso é comum
-# quando o zip já vem com uma pasta interna de mesmo nome. Testando
-# primeiro com PARTICIPANTES_2025.csv (dados de perfil/inscrição).
-CAMINHO_CSV_BRUTO = (
-    PASTA_ETL
-    / "microdados_enem_2025"
-    / "microdados_enem_2025"
-    / "DADOS"
-    / "PARTICIPANTES_2025.csv"
-)
-CAMINHO_PARQUET_SAIDA = PASTA_ETL / "trusted_amostra.parquet"
+CAMINHO_RESULTADOS_CSV = PASTA_DADOS_BRUTOS / "RESULTADOS_2025.csv"
+CAMINHO_PARTICIPANTES_CSV = PASTA_DADOS_BRUTOS / "PARTICIPANTES_2025.csv"
+
+CAMINHO_RESULTADOS_PARQUET = PASTA_SAIDA / "resultados_2025.parquet"
+CAMINHO_PARTICIPANTES_PARQUET = PASTA_SAIDA / "participantes_2025.parquet"
+
+# --- Colunas selecionadas -------------------------------------------------
+# Reduzir as colunas JA na leitura do CSV (via `columns=`) economiza
+# memoria, porque o Polars nao aloca espaco para as colunas descartadas.
+
+COLUNAS_RESULTADOS = [
+    "SG_UF_PROVA",
+    "NU_NOTA_CN",
+    "NU_NOTA_CH",
+    "NU_NOTA_LC",
+    "NU_NOTA_MT",
+    "NU_NOTA_REDACAO",
+]
+
+# Escopo atual: so as colunas ja mapeadas oficialmente no #33/#42.
+# As colunas demograficas dos outros 3 modulos (Abismo Digital, Peso do
+# CEP, Equidade de Escolas) ainda nao tem dicionario proprio -- quando
+# tiverem, essa lista cresce.
+COLUNAS_PARTICIPANTES = [
+    "SG_UF_PROVA",
+    "TP_SEXO",
+]
+
+# Defina um numero aqui (ex: 1000) para testes rapidos sem processar o
+# arquivo inteiro. Deixe None para a execucao de producao (arquivo
+# completo) -- e o que o ticket #34 pede.
+LIMITE_LINHAS_DEV: int | None = None
 
 
-def ler_amostra_microdados(caminho_csv: Path, n_linhas: int = 100) -> pl.DataFrame:
+def ler_csv_producao(caminho_csv: Path, colunas: list[str], n_linhas: int | None) -> pl.DataFrame:
     """
-    Lê apenas as primeiras `n_linhas` do CSV bruto do INEP.
+    Le o CSV bruto do INEP selecionando so as colunas necessarias.
 
-    Detalhes importantes dos parâmetros:
-    - separator=";"  → os microdados do INEP usam ponto-e-vírgula como
-      separador de colunas (padrão comum em arquivos de origem brasileira,
-      já que a vírgula é usada como separador decimal).
-    - encoding="latin1" → os arquivos do INEP normalmente NÃO vêm em UTF-8;
-      vêm em Latin-1 (também chamado ISO-8859-1). Se você tentar ler como
-      UTF-8, vai dar erro de decodificação em qualquer acento (ex: "Município").
-    - n_rows=100 → ATENÇÃO: no Polars o parâmetro se chama `n_rows`,
-      não `nrows` como no Pandas. É um erro comum na migração entre as
-      duas bibliotecas. Isso evita carregar o arquivo de 3GB+ inteiro
-      só para testar se o pipeline funciona.
+    - separator=";" e encoding="latin1": padrao do INEP, ja usado desde
+      o #27/#33.
+    - columns=colunas: instrui o Polars a nao alocar memoria para as
+      colunas que nao vamos usar -- essencial pra rodar sobre o arquivo
+      completo (3GB+) sem estourar a RAM.
+    - n_rows=n_linhas: so aplicado se n_linhas nao for None (modo dev).
+      Em producao (n_linhas=None), le o arquivo inteiro.
     """
-    if not caminho_csv.exists():
-        # Checagem explícita antes de tentar ler: se o caminho estiver
-        # errado (arquivo movido, nome diferente, etc.), a mensagem de
-        # erro já mostra o caminho completo que foi procurado, em vez
-        # de um FileNotFoundError genérico do sistema operacional.
-        raise FileNotFoundError(
-            f"CSV não encontrado em: {caminho_csv.resolve()}\n"
-            "Confira se o caminho em CAMINHO_CSV_BRUTO bate com a "
-            "estrutura de pastas real do seu microdado extraído."
-        )
-
-    df = pl.read_csv(
-        caminho_csv,
-        separator=";",
-        encoding="latin1",
-        n_rows=n_linhas,
-    )
-    return df
+    kwargs = dict(separator=";", encoding="latin1", columns=colunas)
+    if n_linhas is not None:
+        kwargs["n_rows"] = n_linhas
+    return pl.read_csv(caminho_csv, **kwargs)
 
 
-def salvar_amostra_parquet(df: pl.DataFrame, caminho_saida: Path) -> None:
+def gerar_parquet_producao(df: pl.DataFrame, caminho_saida: Path) -> None:
     """
-    Converte a amostra para Parquet.
+    Salva o DataFrame em Parquet com compressao zstd.
 
-    Por que Parquet e não CSV?
-    - Formato colunar: leitura seletiva de colunas é muito mais rápida.
-    - Compressão nativa: ocupa uma fração do espaço do CSV original.
-    - Mantém os tipos de dados (int, float, string) sem precisar
-      reconverter toda vez que o arquivo é lido de novo.
+    zstd foi escolhido (em vez de snappy) por comprimir mais o arquivo
+    final, com custo de CPU pequeno -- bom trade-off aqui porque este
+    arquivo e escrito uma vez e lido raramente (so no deploy).
     """
-    df.write_parquet(caminho_saida)
+    caminho_saida.parent.mkdir(parents=True, exist_ok=True)
+    df.write_parquet(caminho_saida, compression="zstd")
+
+
+def imprimir_volumetria(nome: str, df: pl.DataFrame, caminho_arquivo: Path) -> None:
+    """
+    Registra as informacoes que alimentam o Relatorio Tecnico de
+    Engenharia de Dados (AV3): quantidade de linhas/colunas e tamanho
+    final do arquivo gerado.
+    """
+    tamanho_mb = caminho_arquivo.stat().st_size / (1024 * 1024)
+    print(f"\n[{nome}]")
+    print(f"  Linhas:  {df.height:,}")
+    print(f"  Colunas: {df.width} -> {df.columns}")
+    print(f"  Arquivo: {caminho_arquivo}")
+    print(f"  Tamanho: {tamanho_mb:.2f} MB (compressao zstd)")
 
 
 def main():
-    print(f"Lendo amostra de '{CAMINHO_CSV_BRUTO}'...")
-    df_amostra = ler_amostra_microdados(CAMINHO_CSV_BRUTO, n_linhas=100)
-    print(f"Amostra lida: {df_amostra.height} linhas x {df_amostra.width} colunas.")
+    modo = "DEV (amostra)" if LIMITE_LINHAS_DEV is not None else "PRODUCAO (arquivo completo)"
+    print(f"Modo de execucao: {modo}\n")
 
-    print("\nSchema dos dados (nome da coluna -> tipo inferido pelo Polars):")
-    print(df_amostra.schema)
+    # --- Camada 1: RESULTADOS (nota x UF) ---
+    print(f"Lendo '{CAMINHO_RESULTADOS_CSV.name}'...")
+    df_resultados = ler_csv_producao(
+        CAMINHO_RESULTADOS_CSV, COLUNAS_RESULTADOS, LIMITE_LINHAS_DEV
+    )
+    gerar_parquet_producao(df_resultados, CAMINHO_RESULTADOS_PARQUET)
 
-    print(f"\nSalvando amostra em '{CAMINHO_PARQUET_SAIDA}'...")
-    salvar_amostra_parquet(df_amostra, CAMINHO_PARQUET_SAIDA)
+    # --- Camada 2: PARTICIPANTES (composicao demografica) ---
+    print(f"Lendo '{CAMINHO_PARTICIPANTES_CSV.name}'...")
+    df_participantes = ler_csv_producao(
+        CAMINHO_PARTICIPANTES_CSV, COLUNAS_PARTICIPANTES, LIMITE_LINHAS_DEV
+    )
+    gerar_parquet_producao(df_participantes, CAMINHO_PARTICIPANTES_PARQUET)
 
-    print("Concluído.")
+    # --- Volumetria final (pra AV3) ---
+    print("\n" + "=" * 60)
+    print("VOLUMETRIA FINAL")
+    print("=" * 60)
+    imprimir_volumetria("RESULTADOS", df_resultados, CAMINHO_RESULTADOS_PARQUET)
+    imprimir_volumetria("PARTICIPANTES", df_participantes, CAMINHO_PARTICIPANTES_PARQUET)
+
+    print("\nConcluido. Os dois arquivos estao em:", PASTA_SAIDA)
+    print("Lembrete: NAO commitar esses .parquet (ja cobertos pelo .gitignore).")
+    print("Proximo passo: entregar os dois arquivos ao Felipe para upload no Azure Blob Storage.")
 
 
 if __name__ == "__main__":
-    # Esse bloco só roda quando o arquivo é executado diretamente
-    # (python etl/ingestion.py), e não quando é importado por outro módulo.
     main()
