@@ -3,3 +3,6 @@ uvicorn[standard]
 pydantic
 polars
 pytest
+# httpx: requerido pelo fastapi.testclient.TestClient usado nos testes de API
+# (ex.: tests/test_filtro_escola.py). Sem ele, o TestClient falha ao importar.
+httpx2
