@@ -3,8 +3,11 @@ import Sidebar from './components/sidebar'
 import StatusBadge from './components/statusBadge'
 import {checkApiHealth, consultarGenero} from './services/api'
 import ResultadoGenero from './components/ResultadoGenero'
+import FiltroEscola from './components/FiltroEscola'
 
 function App() {
+  const [moduloAtivo, setModuloAtivo] = useState('genero')
+
   // Estados dos filtros
   const [ano, setAno] = useState('2024')
   const [estados, setEstados] = useState([])
@@ -57,7 +60,38 @@ async function handleConsultar() {
 }
 
   return (
-    <div className="min-h-screen bg-slate-100 md:flex">
+    <div className="min-h-screen bg-slate-100">
+      <div className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div>
+            <p className="text-lg font-bold text-slate-900">Radar ENEM</p>
+            <p className="text-sm text-slate-500">Módulos de análise estatística</p>
+          </div>
+          <nav aria-label="Módulos de análise" className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              aria-pressed={moduloAtivo === 'genero'}
+              onClick={() => setModuloAtivo('genero')}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${moduloAtivo === 'genero' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+            >
+              Dashboard atual
+            </button>
+            <button
+              type="button"
+              aria-pressed={moduloAtivo === 'escola'}
+              onClick={() => setModuloAtivo('escola')}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${moduloAtivo === 'escola' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+            >
+              Tipo de escola
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      {moduloAtivo === 'escola' ? (
+        <FiltroEscola />
+      ) : (
+        <div className="min-h-screen md:flex">
 
       {/* SIDEBAR */}
       <Sidebar
@@ -175,6 +209,8 @@ async function handleConsultar() {
 
       </main>
 
+        </div>
+      )}
     </div>
   )
 }
