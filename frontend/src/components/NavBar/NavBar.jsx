@@ -5,6 +5,7 @@ import './styles-nav-bar/NavBar.css';
 const LINKS = [
   { to: '/', label: 'Trilha de Gênero' },
   { to: '/areas', label: 'Nota × Área do Conhecimento' },
+  { to: '/escola', label: 'Tipo de Escola' },
 ];
 
 function NavBar() {

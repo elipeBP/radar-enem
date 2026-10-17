@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import Dashboard from './pages/Dashboard/Dashboard';
 import Areas from './pages/Areas/Areas';
+import Escola from './pages/Escola/Escola';
 import NotFound from './pages/NotFound/NotFound';
 
 function App() {
@@ -11,6 +12,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/areas" element={<Areas />} />
+        <Route path="/escola" element={<Escola />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
