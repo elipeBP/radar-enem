@@ -7,15 +7,15 @@ o CORS e as rotas — a validação de dados fica em schemas.py.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+from core.analise_areas import analisar_areas
 try:
     # Funciona quando você roda de dentro da pasta api/:
     #   cd api && uvicorn main:app --reload
-    from schemas import FiltroGenero, RespostaGenero
+    from schemas import FiltroGenero, RespostaGenero,FiltroAreas, RespostaAreas
 except ImportError:
     # Funciona quando você roda a partir da raiz do projeto:
     #   uvicorn api.main:app --reload
-    from api.schemas import FiltroGenero, RespostaGenero
+    from api.schemas import FiltroGenero, RespostaGenero,FiltroAreas, RespostaAreas
 
 app = FastAPI(
     title="Radar ENEM API",
@@ -77,4 +77,20 @@ def analise_genero(filtros: FiltroGenero):
         status="success",
         mensagem="Dados simulados retornados com sucesso (mock).",
         dados=dados_mock,
+    )
+
+@app.post("/api/dados/areas", response_model=RespostaAreas)
+def analise_areas(filtros: FiltroAreas):
+    dados = analisar_areas(
+        nota_cn=filtros.nota_cn,
+        nota_ch=filtros.nota_ch,
+        nota_lc=filtros.nota_lc,
+        nota_mt=filtros.nota_mt,
+        nota_redacao=filtros.nota_redacao,
+    )
+
+    return RespostaAreas(
+        status="success",
+        mensagem="Análise comparativa por área realizada com sucesso.",
+        dados=dados,
     )
