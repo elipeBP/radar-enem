@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Sidebar from '../../components/Sidebar/sidebar';
 import StatusBadge from '../../components/StatusBadge/statusBadge';
 import ResultadoGenero from '../../components/ResultadoGenero/ResultadoGenero';
+import NavBar from '../../components/NavBar/NavBar';
 import { checkApiHealth, consultarGenero } from '../../services/api';
 
 import './styles-dashboard/Dashboard.css';
@@ -79,6 +80,8 @@ function Dashboard() {
       />
 
       <main className="dashboard__main">
+        <NavBar />
+
         <div className="dashboard__container">
           <header className="dashboard__header">
             <div>
