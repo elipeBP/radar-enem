@@ -5,17 +5,43 @@ Ponto de entrada da API. Aqui só vive a inicialização do FastAPI,
 o CORS e as rotas — a validação de dados fica em schemas.py.
 """
 
-from fastapi import FastAPI
+
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 try:
-    # Funciona quando você roda de dentro da pasta api/:
-    #   cd api && uvicorn main:app --reload
-    from schemas import FiltroGenero, RespostaGenero
+    from schemas import (
+        FiltroGenero,
+        RespostaGenero,
+        FiltroNotaUF,
+        RespostaNotaUF,
+    )
 except ImportError:
-    # Funciona quando você roda a partir da raiz do projeto:
-    #   uvicorn api.main:app --reload
-    from api.schemas import FiltroGenero, RespostaGenero
+    from api.schemas import (
+        FiltroGenero,
+        RespostaGenero,
+        FiltroNotaUF,
+        RespostaNotaUF,
+    )
+
+try:
+    from core.nota_uf import (
+        analisar_nota_uf,
+        DadosIndisponiveisError,
+        UFsemDadosError,
+    )
+except ImportError:
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+    from core.nota_uf import (
+        analisar_nota_uf,
+        DadosIndisponiveisError,
+        UFsemDadosError,
+    )
+
 
 app = FastAPI(
     title="Radar ENEM API",
@@ -77,4 +103,35 @@ def analise_genero(filtros: FiltroGenero):
         status="success",
         mensagem="Dados simulados retornados com sucesso (mock).",
         dados=dados_mock,
+    )
+@app.post("/api/dados/uf", response_model=RespostaNotaUF)
+def analise_nota_uf(filtros: FiltroNotaUF):
+    """Consulta o percentil e o Z-Score da nota em relação à UF e área escolhidas."""
+
+    try:
+        dados = analisar_nota_uf(
+            estado=filtros.estado,
+            area=filtros.area,
+            nota_usuario=filtros.nota_usuario,
+        )
+    except UFsemDadosError as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        ) from exc
+    except DadosIndisponiveisError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc),
+        ) from exc
+
+    return RespostaNotaUF(
+        status="success",
+        mensagem="Análise estatística calculada com os dados de referência do ENEM 2025.",
+        dados=dados,
     )

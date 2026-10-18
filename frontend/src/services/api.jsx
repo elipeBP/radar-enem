@@ -82,3 +82,52 @@ export async function consultarGenero(filtros) {
 
   return await response.json();
 }
+
+export async function consultarNotaUF(filtros) {
+  let response;
+
+  try {
+    response = await fetch(`${API_URL}/api/dados/uf`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        estado: filtros.estado,
+        area: filtros.area,
+        nota_usuario: Number(filtros.nota),
+      }),
+    });
+  } catch {
+    throw criarErroApi(
+      'Não foi possível conectar à API. Verifique se o backend está online.',
+    );
+  }
+
+  let dados;
+
+  try {
+    dados = await response.json();
+  } catch {
+    throw criarErroApi(
+      'A API retornou uma resposta inválida.',
+      response.status,
+    );
+  }
+
+  if (!response.ok) {
+    const detalhe = dados?.detail;
+
+    const mensagem = Array.isArray(detalhe)
+      ? detalhe.map((item) => item.msg).join('; ')
+      : detalhe;
+
+    throw criarErroApi(
+      mensagem ||
+        `Não foi possível consultar a nota. Erro ${response.status}.`,
+      response.status,
+    );
+  }
+
+  return dados;
+}

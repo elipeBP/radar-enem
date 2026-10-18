@@ -11,7 +11,9 @@ Por que separar isso do main.py?
 - Facilita testes unitários dos modelos isoladamente.
 """
 
-from pydantic import BaseModel, Field
+import math
+
+from pydantic import BaseModel, Field, field_validator
 from typing import Literal
 
 
@@ -57,6 +59,68 @@ class RespostaGenero(BaseModel):
     garante que, quando a lógica real substituir o mock, o formato do
     JSON devolvido para o frontend não muda de surpresa.
     """
+
+    status: Literal["success", "error"]
+    mensagem: str
+    dados: dict
+
+
+# Filtro 1 — Nota por Estado (UF)
+
+UFS_VALIDAS = frozenset({
+    "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO",
+    "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI",
+    "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+})
+
+
+class FiltroNotaUF(BaseModel):
+    """Entrada da consulta de nota por UF e área do ENEM."""
+
+    estado: str = Field(
+        ...,
+        description="Sigla da unidade federativa, por exemplo SC.",
+    )
+
+    area: Literal["CN", "CH", "LC", "MT", "REDACAO"] = Field(
+        ...,
+        description="Área da prova do ENEM.",
+    )
+
+    nota_usuario: float = Field(
+        ...,
+        strict=True,
+        ge=0,
+        le=1000,
+        description="Nota informada pelo usuário, entre 0 e 1000.",
+    )
+
+    @field_validator("estado", mode="before")
+    @classmethod
+    def validar_estado(cls, valor: object) -> str:
+        if not isinstance(valor, str):
+            raise ValueError("Informe uma sigla de UF válida.")
+
+        uf = valor.strip().upper()
+
+        if uf not in UFS_VALIDAS:
+            raise ValueError("Informe uma UF brasileira válida.")
+
+        return uf
+
+    @field_validator("nota_usuario")
+    @classmethod
+    def validar_nota_finita(cls, valor: float) -> float:
+        if not math.isfinite(valor):
+            raise ValueError("A nota deve ser um número finito.")
+
+        return valor
+
+    model_config = {"extra": "forbid"}
+
+
+class RespostaNotaUF(BaseModel):
+    """Resposta da consulta estatística de nota por UF."""
 
     status: Literal["success", "error"]
     mensagem: str

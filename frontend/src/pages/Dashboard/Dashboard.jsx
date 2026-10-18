@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Sidebar from '../../components/Sidebar/sidebar';
 import StatusBadge from '../../components/StatusBadge/statusBadge';
 import ResultadoGenero from '../../components/ResultadoGenero/ResultadoGenero';
+import NotaUF from '../../components/NotaUF/NotaUF';
 import { checkApiHealth, consultarGenero } from '../../services/api';
 
 import './styles-dashboard/Dashboard.css';
@@ -109,6 +110,8 @@ function Dashboard() {
               error={error}
             />
           </section>
+
+          <NotaUF />
         </div>
       </main>
     </div>
