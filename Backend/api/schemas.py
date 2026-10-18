@@ -50,6 +50,29 @@ class FiltroGenero(BaseModel):
             "example": {"ano": 2024, "estado": "SC", "nota_matematica": 720.5}
         }
 
+class FiltroAreas(BaseModel):
+    nota_cn: float = Field(..., ge=0, le=1000)
+    nota_ch: float = Field(..., ge=0, le=1000)
+    nota_lc: float = Field(..., ge=0, le=1000)
+    nota_mt: float = Field(..., ge=0, le=1000)
+    nota_redacao: float = Field(..., ge=0, le=1000)
+class ResultadoArea(BaseModel):
+    area: str
+    nota: float
+    percentil: float
+
+
+class DadosRespostaAreas(BaseModel):
+    areas: list[ResultadoArea]
+    area_mais_forte: str
+    area_mais_fraca: str
+    desvio_padrao_percentis: float
+
+
+class RespostaAreas(BaseModel):
+    status: Literal["success", "error"]
+    mensagem: str
+    dados: DadosRespostaAreas
 
 class RespostaGenero(BaseModel):
     """
