@@ -1,121 +1,201 @@
-export default function ResultadoAreas({ resultado }) {
-  if (!resultado) {
-    return null
+
+import './ResultadoAreas.css';
+
+function formatarValor(valor) {
+  if (valor === null || valor === undefined || valor === '') {
+    return '—';
   }
 
-  const {
-    areas,
-    area_mais_forte,
-    area_mais_fraca,
-    desvio_padrao_percentis,
-  } = resultado
+  const numero = Number(valor);
 
-  const interpretacaoDesvio = interpretarDesvio(
-    desvio_padrao_percentis
-  )
-
-  return (
-    <div className="bg-white rounded-xl shadow p-6 space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold">
-          Resultado da análise
-        </h2>
-
-        <p className="text-sm text-gray-500 mt-1">
-          Percentil em relação à distribuição nacional do ENEM 2025.
-        </p>
-      </div>
-
-      <div className="space-y-4">
-        {areas.map((item) => (
-          <div key={item.area}>
-            <div className="flex justify-between mb-1">
-              <span className="font-medium">
-                {item.area}
-              </span>
-
-              <span className="text-sm">
-                Percentil {item.percentil}
-              </span>
-            </div>
-
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div
-                className="bg-blue-600 h-3 rounded-full"
-                style={{ width: `${item.percentil}%` }}
-              />
-            </div>
-
-            <p className="text-xs text-gray-500 mt-1">
-              Nota: {item.nota}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="border rounded-lg p-4">
-          <p className="text-sm text-gray-500">
-            Área relativamente mais forte
-          </p>
-
-          <p className="font-semibold mt-1">
-            {area_mais_forte}
-          </p>
-        </div>
-
-        <div className="border rounded-lg p-4">
-          <p className="text-sm text-gray-500">
-            Área relativamente mais fraca
-          </p>
-
-          <p className="font-semibold mt-1">
-            {area_mais_fraca}
-          </p>
-        </div>
-
-        <div className="border rounded-lg p-4">
-          <p className="text-sm text-gray-500">
-            Equilíbrio entre as áreas
-          </p>
-
-          <p className="mt-1 text-2xl font-semibold">
-            {desvio_padrao_percentis}
-          </p>
-
-          <p className="mt-2 font-semibold text-slate-900">
-            {interpretacaoDesvio.titulo}
-          </p>
-
-          <p className="mt-1 text-sm text-slate-500">
-            {interpretacaoDesvio.descricao}
-          </p>
-        </div>
-      </div>
-    </div>
-  )
+  return Number.isFinite(numero)
+    ? new Intl.NumberFormat('pt-BR', {
+        maximumFractionDigits: 1,
+      }).format(numero)
+    : String(valor);
 }
 
 function interpretarDesvio(desvio) {
-  if (desvio <= 5) {
+  const valor = Number(desvio);
+
+  if (desvio === null || desvio === undefined || desvio === '' ||
+      !Number.isFinite(valor)) {
+    return {
+      titulo: 'Interpretação indisponível',
+      descricao:
+        'Não há informação suficiente para interpretar a dispersão entre as áreas.',
+    };
+  }
+
+  if (valor <= 5) {
     return {
       titulo: 'Perfil bastante equilibrado',
       descricao:
         'Seus percentis estão próximos entre si, indicando desempenho relativo consistente entre as áreas.',
-    }
+    };
   }
 
-  if (desvio <= 10) {
+  if (valor <= 10) {
     return {
       titulo: 'Perfil moderadamente equilibrado',
       descricao:
         'Há algumas diferenças entre seus desempenhos relativos, mas sem grande dispersão entre as áreas.',
-    }
+    };
   }
 
   return {
     titulo: 'Perfil com diferenças mais marcantes',
     descricao:
       'Seus percentis apresentam maior dispersão, indicando áreas de destaque e outras relativamente mais distantes.',
-  }
+  };
 }
+
+function ResultadoAreas({ resultado }) {
+  if (!resultado) {
+    return null;
+  }
+
+  const {
+    areas = [],
+    area_mais_forte,
+    area_mais_fraca,
+    desvio_padrao_percentis,
+  } = resultado;
+
+  const interpretacaoDesvio = interpretarDesvio(
+    desvio_padrao_percentis,
+  );
+
+  return (
+    <div className="resultado-areas">
+      <section className="resultado-areas__panel">
+        <header className="resultado-areas__panel-header">
+          <div>
+            <h3 className="resultado-areas__panel-title">
+              Desempenho por área
+            </h3>
+
+            <p className="resultado-areas__panel-description">
+              Percentil em relação à distribuição nacional do ENEM 2025.
+            </p>
+          </div>
+
+          <span className="resultado-areas__unit">
+            Percentis
+          </span>
+        </header>
+
+        {areas.length > 0 ? (
+          <div className="resultado-areas__list">
+            {areas.map((item) => {
+              const numeroPercentil = Number(item.percentil);
+
+              const percentilLimitado = Number.isFinite(numeroPercentil)
+                ? Math.min(100, Math.max(0, numeroPercentil))
+                : 0;
+
+              return (
+                <article
+                  key={item.area}
+                  className="resultado-areas__area"
+                >
+                  <div className="resultado-areas__area-header">
+                    <h4 className="resultado-areas__area-name">
+                      {item.area}
+                    </h4>
+
+                    <span className="resultado-areas__percentile">
+                      Percentil {formatarValor(item.percentil)}
+                    </span>
+                  </div>
+
+                  <div
+                    className="resultado-areas__progress"
+                    role="progressbar"
+                    aria-label={`Percentil em ${item.area}`}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={percentilLimitado}
+                  >
+                    <div
+                      className="resultado-areas__progress-fill"
+                      style={{ width: `${percentilLimitado}%` }}
+                    />
+                  </div>
+
+                  <div className="resultado-areas__area-footer">
+                    <span>Nota obtida</span>
+                    <strong>{formatarValor(item.nota)}</strong>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="resultado-areas__empty">
+            Não há resultados por área disponíveis para esta consulta.
+          </p>
+        )}
+      </section>
+
+      <section
+        className="resultado-areas__summary"
+        aria-label="Resumo do desempenho"
+      >
+        <article className="resultado-areas__summary-card resultado-areas__summary-card--strong">
+          <span className="resultado-areas__summary-label">
+            Melhor desempenho relativo
+          </span>
+
+          <h3 className="resultado-areas__summary-value">
+            {area_mais_forte || '—'}
+          </h3>
+
+          <p className="resultado-areas__summary-description">
+            Área com maior destaque relativo na análise.
+          </p>
+        </article>
+
+        <article className="resultado-areas__summary-card resultado-areas__summary-card--weak">
+          <span className="resultado-areas__summary-label">
+            Menor desempenho relativo
+          </span>
+
+          <h3 className="resultado-areas__summary-value">
+            {area_mais_fraca || '—'}
+          </h3>
+
+          <p className="resultado-areas__summary-description">
+            Área que merece atenção na comparação entre resultados.
+          </p>
+        </article>
+
+        <article className="resultado-areas__summary-card resultado-areas__summary-card--balance">
+          <span className="resultado-areas__summary-label">
+            Dispersão entre percentis
+          </span>
+
+          <h3 className="resultado-areas__deviation">
+            {formatarValor(desvio_padrao_percentis)}
+          </h3>
+
+          <p className="resultado-areas__interpretation-title">
+            {interpretacaoDesvio.titulo}
+          </p>
+
+          <p className="resultado-areas__summary-description">
+            {interpretacaoDesvio.descricao}
+          </p>
+        </article>
+      </section>
+
+      <p className="resultado-areas__disclaimer">
+        A comparação por percentis representa uma posição relativa na
+        distribuição utilizada. Ela não corresponde diretamente à
+        porcentagem de questões acertadas.
+      </p>
+    </div>
+  );
+}
+
+export default ResultadoAreas;
