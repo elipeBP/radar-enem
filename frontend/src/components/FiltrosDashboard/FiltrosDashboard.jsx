@@ -1,4 +1,6 @@
 
+import MapaBrasil from '../MapaInterativo/MapaBrasil';
+
 import './styles-filtros-dashboard/FiltrosDashboard.css';
 
 const estadosBrasil = [
@@ -18,41 +20,38 @@ function FiltrosDashboard({
   onConsultar,
   loading,
 }) {
-  function alternarEstado(estado) {
+  function removerEstado(estado) {
     setEstados((atuais) =>
-      atuais.includes(estado)
-        ? atuais.filter((item) => item !== estado)
-        : [...atuais, estado],
+      atuais.filter((item) => item !== estado),
     );
   }
 
+  const estadosResumo = [...estados].sort(
+    (a, b) => estadosBrasil.indexOf(a) - estadosBrasil.indexOf(b),
+  );
+
   return (
     <section className="filtros-dashboard">
-      <header className="filtros-dashboard__header">
-        <div>
-          <h2 className="filtros-dashboard__title">
-            Filtros da consulta
-          </h2>
+      <div
+        className="filtros-dashboard__summary"
+        aria-label="Filtros da consulta"
+      >
+        <h2 className="filtros-dashboard__summary-title">
+          Filtros selecionados
+        </h2>
 
-          <p className="filtros-dashboard__description">
-            Defina os critérios para analisar os resultados do ENEM.
-          </p>
-        </div>
-      </header>
-
-      <div className="filtros-dashboard__form">
-        <div className="filtros-dashboard__primary-fields">
-          <div className="filtros-dashboard__field">
+        <div className="filtros-dashboard__summary-grid">
+          <div className="filtros-dashboard__summary-card">
             <label
-              className="filtros-dashboard__label"
+              className="filtros-dashboard__summary-label"
               htmlFor="filtro-ano"
             >
-              Ano do ENEM
+              Ano
             </label>
 
             <select
               id="filtro-ano"
-              className="filtros-dashboard__input"
+              className="filtros-dashboard__summary-input filtros-dashboard__summary-input--center"
               value={ano}
               onChange={(event) => setAno(event.target.value)}
             >
@@ -66,22 +65,62 @@ function FiltrosDashboard({
             </select>
           </div>
 
-          <div className="filtros-dashboard__field">
+          <div className="filtros-dashboard__summary-card filtros-dashboard__summary-card--states">
+            <div className="filtros-dashboard__summary-state-header">
+              <span className="filtros-dashboard__summary-label">
+                Estados
+              </span>
+
+              <span className="filtros-dashboard__count-badge">
+                {estados.length} selecionado(s)
+              </span>
+            </div>
+
+            {estadosResumo.length > 0 ? (
+              <div className="filtros-dashboard__selected-states">
+                {estadosResumo.slice(0, 5).map((estado) => (
+                  <button
+                    type="button"
+                    key={estado}
+                    className="filtros-dashboard__selected-state"
+                    onClick={() => removerEstado(estado)}
+                    aria-label={`Remover ${estado} da seleção`}
+                    title={`Remover ${estado}`}
+                  >
+                    {estado}
+                    <span aria-hidden="true">×</span>
+                  </button>
+                ))}
+
+                {estadosResumo.length > 5 && (
+                  <span className="filtros-dashboard__more-states">
+                    +{estadosResumo.length - 5}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <span className="filtros-dashboard__no-state">
+                Nenhum estado selecionado
+              </span>
+            )}
+          </div>
+
+          <div className="filtros-dashboard__summary-card">
             <label
-              className="filtros-dashboard__label"
+              className="filtros-dashboard__summary-label"
               htmlFor="filtro-nota-matematica"
             >
-              Nota mínima em Matemática
+              Nota Matemática
             </label>
 
             <input
               id="filtro-nota-matematica"
-              className="filtros-dashboard__input"
+              className="filtros-dashboard__summary-input filtros-dashboard__summary-input--center"
               type="number"
               min="0"
               max="1000"
               step="1"
-              placeholder="Ex.: 700"
+              placeholder="Qualquer nota"
               value={notaMatematica}
               onChange={(event) =>
                 setNotaMatematica(event.target.value)
@@ -89,85 +128,39 @@ function FiltrosDashboard({
             />
           </div>
         </div>
+      </div>
 
-        <fieldset className="filtros-dashboard__states-field">
-          <legend className="filtros-dashboard__legend">
-            Estados da prova
-          </legend>
-
-          <div className="filtros-dashboard__states-toolbar">
-            <span className="filtros-dashboard__counter">
-              {estados.length} de {estadosBrasil.length} estados selecionados
-            </span>
-
-            <div className="filtros-dashboard__actions">
-              <button
-                type="button"
-                className="filtros-dashboard__action-button"
-                onClick={() => setEstados([...estadosBrasil])}
-              >
-                Selecionar todos
-              </button>
-
-              <span className="filtros-dashboard__action-separator">
-                ·
-              </span>
-
-              <button
-                type="button"
-                className="filtros-dashboard__action-button"
-                onClick={() => setEstados([])}
-              >
-                Limpar seleção
-              </button>
-            </div>
+      <div className="filtros-dashboard__map-section">
+        <div className="filtros-dashboard__map-heading">
+          <div>
+            <h2>Seleção de estados</h2>
+            <p>
+              Escolha no mapa as UFs que deseja incluir na análise.
+            </p>
           </div>
+        </div>
 
-          <div className="filtros-dashboard__states-grid">
-            {estadosBrasil.map((estado) => {
-              const selecionado = estados.includes(estado);
+        <MapaBrasil
+          estados={estados}
+          setEstados={setEstados}
+        />
+      </div>
 
-              return (
-                <label
-                  key={estado}
-                  className={`filtros-dashboard__state-option${
-                    selecionado
-                      ? ' filtros-dashboard__state-option--selected'
-                      : ''
-                  }`}
-                >
-                  <input
-                    className="filtros-dashboard__checkbox"
-                    type="checkbox"
-                    checked={selecionado}
-                    onChange={() => alternarEstado(estado)}
-                  />
+      <div className="filtros-dashboard__footer">
+        <p className="filtros-dashboard__footer-hint">
+          {estados.length === 0
+            ? 'Selecione ao menos um estado para realizar a consulta.'
+            : `${estados.length} estado(s) selecionado(s) para a consulta.`}
+        </p>
 
-                  <span>{estado}</span>
-                </label>
-              );
-            })}
-          </div>
-
-          <p className="filtros-dashboard__hint">
-            Selecione um ou mais estados para restringir a consulta.
-          </p>
-        </fieldset>
-
-        <footer className="filtros-dashboard__footer">
-          <p className="filtros-dashboard__footer-hint">
-            Os critérios serão aplicados ao consultar os dados.
-          </p>
-
-          <button
-            type="button"
-            className="filtros-dashboard__submit"
-            onClick={onConsultar}
-            disabled={loading}
-          >
-            {loading ? 'Consultando...' : 'Consultar dados'}
-          </button>
-        </footer>
+        <button
+          type="button"
+          className="filtros-dashboard__submit"
+          onClick={onConsultar}
+          disabled={loading || estados.length === 0}
+        >
+          {loading ? 'Consultando...' : 'Consultar dados'}
+        </button>
       </div>
     </section>
   );
