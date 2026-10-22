@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { consultarEscola } from '../../services/api'
-import NavBar from '../../components/NavBar/NavBar'
+
 
 const UFS = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
@@ -257,7 +257,7 @@ function FiltroEscola() {
 
   return (
     <>
-      <NavBar />
+     
 
       <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       <header className="mb-8">

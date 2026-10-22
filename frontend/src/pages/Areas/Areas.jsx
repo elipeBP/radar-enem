@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import NavBar from '../../components/NavBar/NavBar';
+
 import FormularioAreas from '../../components/FormularioAreas/FormularioAreas';
 import ResultadoAreas from '../../components/ResultadoAreas/ResultadoAreas';
 import { consultarAreas } from '../../services/api';
@@ -29,7 +29,7 @@ function Areas() {
 
   return (
     <div className="areas-page">
-      <NavBar />
+     
 
       <main className="areas-page__main">
         <div className="areas-page__container">
