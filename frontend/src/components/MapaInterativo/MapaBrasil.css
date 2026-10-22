@@ -170,9 +170,9 @@
 .mapa-brasil__svg {
   display: block;
   width: 100%;
-  max-width: 720px;
+  max-width: 900px;
   height: auto;
-  max-height: 440px;
+  max-height: 520px;
   margin: 0 auto;
   overflow: visible;
 }

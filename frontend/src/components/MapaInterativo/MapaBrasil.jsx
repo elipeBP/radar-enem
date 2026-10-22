@@ -42,54 +42,98 @@ function obterNome(geografia) {
   );
 }
 
+
+function corrigirOrientacaoParaD3(geometria) {
+  if (!geometria) {
+    return geometria;
+  }
+
+  if (geometria.type === 'Polygon') {
+    return {
+      ...geometria,
+      coordinates: geometria.coordinates.map((anel) =>
+        [...anel].reverse(),
+      ),
+    };
+  }
+
+  if (geometria.type === 'MultiPolygon') {
+    return {
+      ...geometria,
+      coordinates: geometria.coordinates.map((poligono) =>
+        poligono.map((anel) => [...anel].reverse()),
+      ),
+    };
+  }
+
+  return geometria;
+}
+
+function corrigirGeoJSONParaD3(dados) {
+  return {
+    ...dados,
+    features: dados.features.map((feature) => ({
+      ...feature,
+      geometry: corrigirOrientacaoParaD3(feature.geometry),
+    })),
+  };
+}
+
+
 function MapaBrasil({ estados, setEstados }) {
   const [dadosMapa, setDadosMapa] = useState(null);
   const [carregandoMapa, setCarregandoMapa] = useState(true);
   const [erroMapa, setErroMapa] = useState('');
   const [estadoEmFoco, setEstadoEmFoco] = useState(null);
 
-  useEffect(() => {
-    const controller = new AbortController();
+  
+useEffect(() => {
+  async function carregarMapa() {
+    setCarregandoMapa(true);
+    setErroMapa('');
 
-    async function carregarMapa() {
-      try {
-        setCarregandoMapa(true);
-        setErroMapa('');
+    try {
+      const resposta = await fetch(GEO_URL);
 
-        const resposta = await fetch(GEO_URL, {
-          signal: controller.signal,
-        });
-
-        if (!resposta.ok) {
-          throw new Error('Não foi possível carregar o mapa.');
-        }
-
-        const dados = await resposta.json();
-
-        if (!Array.isArray(dados.features)) {
-          throw new Error('O arquivo do mapa possui um formato inválido.');
-        }
-
-        if (!controller.signal.aborted) {
-          setDadosMapa(dados);
-        }
-      } catch (error) {
-        if (error.name !== 'AbortError') {
-          setErroMapa(
-            'Não foi possível carregar o mapa do Brasil. Verifique o arquivo public/data/estados.geojson.',
-          );
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setCarregandoMapa(false);
-        }
+      if (!resposta.ok) {
+        throw new Error(
+          `Falha ao carregar GeoJSON: HTTP ${resposta.status}`,
+        );
       }
+
+      const dados = await resposta.json();
+
+      if (
+        dados.type !== 'FeatureCollection' ||
+        !Array.isArray(dados.features) ||
+        dados.features.length === 0
+      ) {
+        throw new Error(
+          'O arquivo não contém uma coleção válida de estados.',
+        );
+      }
+
+      const dadosCorrigidos = corrigirGeoJSONParaD3(dados);
+
+      setDadosMapa(dadosCorrigidos);
+
+      console.log(
+        `[MapaBrasil] ${dadosCorrigidos.features.length} estados carregados.`,
+      );
+    } catch (error) {
+      console.error('[MapaBrasil] Erro ao carregar mapa:', error);
+
+      setErroMapa(
+        'Não foi possível processar o mapa do Brasil. Consulte o Console para verificar o erro.',
+      );
+    } finally {
+      setCarregandoMapa(false);
     }
+  }
 
-    carregarMapa();
+  carregarMapa();
+}, []);
 
-    return () => controller.abort();
-  }, []);
 
   function alternarEstado(uf) {
     if (!UFS_BRASIL.includes(uf)) {
@@ -214,13 +258,13 @@ function MapaBrasil({ estados, setEstados }) {
             height={600}
             projection="geoMercator"
             projectionConfig={{
-                scale: 500,
+                scale: 675,
                 center: [-54, -15],
             }}
             style={{
                 width: '100%',
                 height: 'auto',
-                maxWidth: '720px',
+                maxWidth: '900px',
                 display: 'block',
                 margin: '0 auto',
             }}
@@ -250,7 +294,7 @@ function MapaBrasil({ estados, setEstados }) {
                         aria-pressed={selecionado}
                         fill={selecionado ? '#2563eb' : '#607d8b'}
                         stroke="#f1f5f9"
-                        strokeWidth={1.1}
+                        strokeWidth={1.4}
                         onClick={() => alternarEstado(uf)}
                         onMouseEnter={() => setEstadoEmFoco({ uf, nome })}
                         onMouseLeave={() => setEstadoEmFoco(null)}
