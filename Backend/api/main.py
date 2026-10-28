@@ -2,8 +2,21 @@
 main.py
 -------
 Ponto de entrada da API. Aqui só vive a inicialização do FastAPI,
-o CORS e as rotas — a validação de dados fica em schemas.py.
+o CORS, o carregamento dos dados (#36) e as rotas -- a validação de
+dados fica em schemas.py, a leitura dos Parquets fica em core/dados.py.
 """
+
+import sys
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+# Garante que a pasta Backend/ (pai de api/) está no caminho de busca do
+# Python, não importa de onde o uvicorn for executado (de dentro de
+# api/ ou da raiz de Backend/). Sem isso, "from core.dados import ..."
+# falha com ModuleNotFoundError quando rodado de dentro de api/: só a
+# própria pasta api/ entra automaticamente no caminho de busca nesse
+# caso, e core/ é uma pasta IRMÃ de api/, não uma pasta dentro dela.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,14 +26,41 @@ try:
     #   cd api && uvicorn main:app --reload
     from schemas import FiltroGenero, RespostaGenero
 except ImportError:
-    # Funciona quando você roda a partir da raiz do projeto:
+    # Funciona quando você roda a partir da raiz de Backend/:
     #   uvicorn api.main:app --reload
     from api.schemas import FiltroGenero, RespostaGenero
+
+from core.dados import carregar_participantes, carregar_resultados
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Roda uma vez quando a API sobe (não a cada requisição).
+
+    Carrega os dois Parquets de produção (#34) e guarda em `app.state`,
+    que é um espaço de memória compartilhado por toda a aplicação
+    enquanto o processo estiver no ar -- assim nenhuma rota precisa
+    reler o arquivo do disco a cada chamada.
+    """
+    app.state.df_resultados = carregar_resultados()
+    app.state.df_participantes = carregar_participantes()
+    print(
+        f"[startup] resultados_2025.parquet: {app.state.df_resultados.height:,} linhas | "
+        f"participantes_2025.parquet: {app.state.df_participantes.height:,} linhas"
+    )
+
+    yield  # a API fica no ar aqui, respondendo requisições
+
+    # Nada a limpar no shutdown: os DataFrames são liberados da memória
+    # automaticamente quando o processo da API termina.
+
 
 app = FastAPI(
     title="Radar ENEM API",
     description="Backend do projeto Radar ENEM - UniSENAI Florianópolis",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 # ---------------------------------------------------------------------------
@@ -56,15 +96,11 @@ def analise_genero(filtros: FiltroGenero):
     """
     Rota do módulo "Trilha de Gênero nas Exatas".
 
-    O FastAPI já recebe o corpo da requisição, valida contra o modelo
-    FiltroGenero (definido em schemas.py) e injeta o resultado validado
-    aqui como o parâmetro `filtros`. Se a validação falhar, a função
-    nem chega a ser chamada — o cliente já recebe um erro 422 detalhado.
-
-    Por enquanto devolvemos um mock (dados simulados), já que a
-    ingestão real dos microdados ainda está sendo construída em
-    etl/ingestion.py. Isso permite que o time de frontend já comece
-    a integrar contra um formato de resposta estável.
+    Ainda devolve um mock (dados simulados) -- ligar essa rota aos
+    DataFrames reais carregados em app.state (via core/estatistica.py)
+    é escopo do #37, não deste ticket (#36). O #36 só garante que os
+    dados reais já estão carregados em memória, prontos pra serem
+    consumidos quando o #37 substituir este mock.
     """
     dados_mock = {
         "percentil_usuario": 82.4,
