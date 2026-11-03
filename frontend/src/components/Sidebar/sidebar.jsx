@@ -1,140 +1,107 @@
 
-import './styles-sidebar/Sidebar.css';
+import { NavLink } from 'react-router-dom';
+import './styles-sidebar/sidebar.css';
 
-const estadosBrasil = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF',
-  'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA',
-  'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS',
-  'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+const LINKS = [
+  {
+    to: '/',
+    label: 'Trilha de Gênero',
+    icon: '/icons/casa.svg',
+  },
+  {
+    to: '/areas',
+    label: 'Nota × Área do Conhecimento',
+    icon: '/icons/stats.svg',
+  },
+  {
+    to: '/escola',
+    label: 'Tipo de Escola',
+    icon: '/icons/usuarios.svg',
+  },
 ];
 
-function Sidebar({
-  ano,
-  setAno,
-  estados,
-  setEstados,
-  notaMatematica,
-  setNotaMatematica,
-  onConsultar,
-  loading,
-}) {
-  function alternarEstado(estado) {
-    setEstados((atuais) =>
-      atuais.includes(estado)
-        ? atuais.filter((item) => item !== estado)
-        : [...atuais, estado],
-    );
-  }
-
+function Sidebar({ expandida, onToggle }) {
   return (
-    <aside className="sidebar">
-      <header className="sidebar__header">
-        <h2 className="sidebar__title">Filtros</h2>
-        <p className="sidebar__description">
-          Configure os critérios para consultar os dados do ENEM.
-        </p>
-      </header>
-
-      <div className="sidebar__filters">
-        <div className="sidebar__field">
-          <label className="sidebar__label" htmlFor="filtro-ano">
-            Ano do ENEM
-          </label>
-
-          <select
-            id="filtro-ano"
-            className="sidebar__input"
-            value={ano}
-            onChange={(event) => setAno(event.target.value)}
-          >
-            {Array.from({ length: 10 }, (_, index) => 2025 - index).map(
-              (valor) => (
-                <option key={valor} value={valor}>
-                  {valor}
-                </option>
-              ),
-            )}
-          </select>
-        </div>
-
-        <div className="sidebar__field">
-          <div className="sidebar__states-header">
-            <span className="sidebar__label">Estados</span>
-            <span className="sidebar__counter">
-              {estados.length} selecionado(s)
-            </span>
-          </div>
-
-          <div className="sidebar__actions">
-            <button
-              type="button"
-              className="sidebar__action-button"
-              onClick={() => setEstados([...estadosBrasil])}
-            >
-              Selecionar todos
-            </button>
-
-            <button
-              type="button"
-              className="sidebar__action-button"
-              onClick={() => setEstados([])}
-            >
-              Limpar
-            </button>
-          </div>
-
-          <div className="sidebar__states-grid">
-            {estadosBrasil.map((estado) => (
-              <label key={estado} className="sidebar__state-option">
-                <input
-                  className="sidebar__checkbox"
-                  type="checkbox"
-                  checked={estados.includes(estado)}
-                  onChange={() => alternarEstado(estado)}
-                />
-                <span>{estado}</span>
-              </label>
-            ))}
-          </div>
-
-          <p className="sidebar__hint">
-            Selecione um ou mais estados para filtrar a consulta.
-          </p>
-        </div>
-
-        <div className="sidebar__field">
-          <label
-            className="sidebar__label"
-            htmlFor="filtro-nota-matematica"
-          >
-            Nota mínima em Matemática
-          </label>
-
-          <input
-            id="filtro-nota-matematica"
-            className="sidebar__input"
-            type="number"
-            min="0"
-            max="1000"
-            step="1"
-            placeholder="Ex.: 700"
-            value={notaMatematica}
-            onChange={(event) => setNotaMatematica(event.target.value)}
+    <aside
+      id="app-sidebar"
+      className={`sidebar ${expandida ? 'sidebar--expanded' : 'sidebar--collapsed'}`}
+    >
+      <div className="sidebar__header">
+        <div className="sidebar__brand">
+          <img
+            src="/radar.svg"
+            alt=""
+            className="sidebar__logo"
           />
+
+          {expandida && (
+            <div className="sidebar__brand-text">
+              <span className="sidebar__brand-name">Radar ENEM</span>
+              <span className="sidebar__brand-description">
+                Análise das desigualdades educacionais
+              </span>
+            </div>
+          )}
         </div>
 
         <button
           type="button"
-          className="sidebar__submit"
-          onClick={onConsultar}
-          disabled={loading}
+          className="sidebar__toggle"
+          onClick={onToggle}
+          aria-label={
+            expandida ? 'Recolher barra lateral' : 'Expandir barra lateral'
+          }
+          aria-expanded={expandida}
+          aria-controls="app-sidebar-navigation"
+          title={expandida ? 'Recolher menu' : 'Expandir menu'}
         >
-          {loading ? 'Consultando...' : 'Consultar dados'}
+          <span />
+          <span />
+          <span />
         </button>
+      </div>
+
+      <nav
+        id="app-sidebar-navigation"
+        className="sidebar__navigation"
+        aria-label="Navegação principal"
+      >
+        {LINKS.map((link) => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            end={link.to === '/'}
+            aria-label={link.label}
+            title={!expandida ? link.label : undefined}
+            className={({ isActive }) =>
+              `sidebar__link${isActive ? ' sidebar__link--active' : ''}`
+            }
+          >
+            <img
+              src={link.icon}
+              alt=""
+              aria-hidden="true"
+              className="sidebar__icon"
+            />
+
+            {expandida && (
+              <span className="sidebar__link-label">
+                {link.label}
+              </span>
+            )}
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="sidebar__footer">
+        {expandida && (
+          <span className="sidebar__footer-text">
+            Plataforma de análise do ENEM
+          </span>
+        )}
       </div>
     </aside>
   );
 }
 
 export default Sidebar;
-

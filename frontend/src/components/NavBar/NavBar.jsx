@@ -1,3 +1,4 @@
+
 import { NavLink } from 'react-router-dom';
 
 import './styles-nav-bar/NavBar.css';
@@ -10,14 +11,20 @@ const LINKS = [
 
 function NavBar() {
   return (
-    <nav className="nav-bar">
+    <nav
+      id="main-navigation"
+      className="nav-bar"
+      aria-label="Navegação principal"
+    >
       {LINKS.map((link) => (
         <NavLink
           key={link.to}
           to={link.to}
           end={link.to === '/'}
           className={({ isActive }) =>
-            isActive ? 'nav-bar__link nav-bar__link--active' : 'nav-bar__link'
+            isActive
+              ? 'nav-bar__link nav-bar__link--active'
+              : 'nav-bar__link'
           }
         >
           {link.label}

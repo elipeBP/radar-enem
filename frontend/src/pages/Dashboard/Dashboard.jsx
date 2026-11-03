@@ -1,10 +1,9 @@
 
 import { useEffect, useState } from 'react';
 
-import Sidebar from '../../components/Sidebar/sidebar';
 import StatusBadge from '../../components/StatusBadge/statusBadge';
 import ResultadoGenero from '../../components/ResultadoGenero/ResultadoGenero';
-import NavBar from '../../components/NavBar/NavBar';
+import FiltrosDashboard from '../../components/FiltrosDashboard/FiltrosDashboard';
 import { checkApiHealth, consultarGenero } from '../../services/api';
 
 import './styles-dashboard/Dashboard.css';
@@ -68,27 +67,16 @@ function Dashboard() {
 
   return (
     <div className="dashboard">
-      <Sidebar
-        ano={ano}
-        setAno={setAno}
-        estados={estados}
-        setEstados={setEstados}
-        notaMatematica={notaMatematica}
-        setNotaMatematica={setNotaMatematica}
-        onConsultar={handleConsultar}
-        loading={loading}
-      />
-
       <main className="dashboard__main">
-        <NavBar />
-
         <div className="dashboard__container">
           <header className="dashboard__header">
             <div>
               <p className="dashboard__eyebrow">RADAR ENEM</p>
+
               <h1 className="dashboard__title">
                 Dashboard de desempenho
               </h1>
+
               <p className="dashboard__description">
                 Explore os dados do ENEM e compare o desempenho conforme
                 os filtros selecionados.
@@ -97,6 +85,19 @@ function Dashboard() {
 
             <StatusBadge status={apiStatus} />
           </header>
+
+          <section className="dashboard__filters">
+            <FiltrosDashboard
+              ano={ano}
+              setAno={setAno}
+              estados={estados}
+              setEstados={setEstados}
+              notaMatematica={notaMatematica}
+              setNotaMatematica={setNotaMatematica}
+              onConsultar={handleConsultar}
+              loading={loading}
+            />
+          </section>
 
           <section className="dashboard__section">
             <div className="dashboard__section-heading">
@@ -119,4 +120,3 @@ function Dashboard() {
 }
 
 export default Dashboard;
-

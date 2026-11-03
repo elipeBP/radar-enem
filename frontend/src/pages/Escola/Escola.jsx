@@ -1,379 +1,752 @@
-import { useState } from 'react'
-import { consultarEscola } from '../../services/api'
-import NavBar from '../../components/NavBar/NavBar'
+
+import { useState } from 'react';
+
+import { consultarEscola } from '../../services/api';
+
+import './styles-escola/Escola.css';
 
 const UFS = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA',
   'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN',
   'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
-]
+];
 
-const NOTA_MIN = 0
-const NOTA_MAX = 1000
-// Aceita "720", "720.5" ou "720,5" (até 2 casas decimais).
-const PADRAO_NOTA = /^\d{1,4}([.,]\d{1,2})?$/
+const NOTA_MIN = 0;
+const NOTA_MAX = 1000;
+const PADRAO_NOTA = /^\d{1,4}([.,]\d{1,2})?$/;
 
-const CORES_CATEGORIA = {
-  publica: 'bg-blue-600',
-  privada: 'bg-amber-500',
-}
+const CLASSES_CATEGORIA = {
+  publica: 'escola-composicao__segment--publica',
+  privada: 'escola-composicao__segment--privada',
+};
 
 function formatarNumero(valor, casas = 2) {
-  if (valor === null || valor === undefined || Number.isNaN(Number(valor))) return '—'
+  if (
+    valor === null ||
+    valor === undefined ||
+    valor === '' ||
+    !Number.isFinite(Number(valor))
+  ) {
+    return '—';
+  }
+
   return Number(valor).toLocaleString('pt-BR', {
     minimumFractionDigits: casas,
     maximumFractionDigits: casas,
-  })
+  });
 }
 
 function formatarInteiro(valor) {
-  return Number(valor).toLocaleString('pt-BR')
+  if (
+    valor === null ||
+    valor === undefined ||
+    valor === '' ||
+    !Number.isFinite(Number(valor))
+  ) {
+    return '—';
+  }
+
+  return Number(valor).toLocaleString('pt-BR', {
+    maximumFractionDigits: 0,
+  });
 }
 
 function validarCampos(estado, notaTexto) {
-  const erros = {}
+  const erros = {};
+
   if (!estado || !UFS.includes(estado)) {
-    erros.estado = 'Selecione uma UF.'
+    erros.estado = 'Selecione uma UF.';
   }
-  const texto = notaTexto.trim()
+
+  const texto = notaTexto.trim();
+
   if (texto === '') {
-    erros.nota = 'Informe sua nota de Matemática.'
+    erros.nota = 'Informe sua nota de Matemática.';
   } else if (!PADRAO_NOTA.test(texto)) {
-    erros.nota = 'Use apenas números, com até 2 casas decimais (ex.: 720,5).'
+    erros.nota =
+      'Use apenas números, com até 2 casas decimais (ex.: 720,5).';
   } else {
-    const valor = Number(texto.replace(',', '.'))
-    if (!Number.isFinite(valor) || valor < NOTA_MIN || valor > NOTA_MAX) {
-      erros.nota = `A nota deve estar entre ${NOTA_MIN} e ${NOTA_MAX} pontos.`
+    const valor = Number(texto.replace(',', '.'));
+
+    if (
+      !Number.isFinite(valor) ||
+      valor < NOTA_MIN ||
+      valor > NOTA_MAX
+    ) {
+      erros.nota =
+        `A nota deve estar entre ${NOTA_MIN} e ${NOTA_MAX} pontos.`;
     }
   }
-  return erros
+
+  return erros;
 }
 
 function CartaoPercentil({ desempenho, uf, ano }) {
-  const percentil = Number(desempenho.percentil_usuario)
-  const largura = Math.min(Math.max(percentil, 0), 100)
+  if (!desempenho) {
+    return null;
+  }
+
+  const valorPercentil = Number(desempenho.percentil_usuario);
+  const percentilValido = Number.isFinite(valorPercentil);
+  const largura = percentilValido
+    ? Math.min(Math.max(valorPercentil, 0), 100)
+    : 0;
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" aria-labelledby="titulo-percentil">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Análise A · Desempenho na UF</p>
-      <div className="mt-2 flex flex-wrap items-start justify-between gap-4">
+    <article
+      className="escola-card escola-percentil"
+      aria-labelledby="titulo-percentil"
+    >
+      <header className="escola-card__header">
         <div>
-          <h2 id="titulo-percentil" className="text-sm font-medium text-slate-500">
+          <p className="escola-card__eyebrow">
+            ANÁLISE A · DESEMPENHO NA UF
+          </p>
+
+          <h2
+            id="titulo-percentil"
+            className="escola-card__title"
+          >
             Seu percentil em {desempenho.area_referencia} · {uf}
           </h2>
-          <p className="mt-2 text-5xl font-bold text-blue-700">
-            {formatarNumero(percentil)}
-            <span className="ml-1 text-2xl font-semibold">º</span>
+
+          <p className="escola-card__subtitle">
+            Sua posição relativa entre as notas válidas de Matemática
+            na unidade da Federação selecionada.
           </p>
         </div>
-        <div className="rounded-lg bg-slate-50 px-4 py-3">
-          <p className="text-xs text-slate-500">Nota informada</p>
-          <p className="mt-1 text-xl font-semibold text-slate-900">{formatarNumero(desempenho.nota_usuario)}</p>
+
+        <span className="escola-card__tag">
+          ENEM {ano}
+        </span>
+      </header>
+
+      <div className="escola-percentil__highlight">
+        <div className="escola-percentil__score">
+          <span className="escola-percentil__score-label">
+            Seu percentil
+          </span>
+
+          <p className="escola-percentil__score-value">
+            {formatarNumero(desempenho.percentil_usuario)}
+            <span className="escola-percentil__ordinal">º</span>
+          </p>
+
+          <span className="escola-percentil__score-caption">
+            Escala de 0 a 100
+          </span>
+        </div>
+
+        <div className="escola-percentil__note">
+          <span className="escola-percentil__note-label">
+            Nota informada
+          </span>
+
+          <strong className="escola-percentil__note-value">
+            {formatarNumero(desempenho.nota_usuario)}
+          </strong>
+
+          <span className="escola-percentil__note-unit">
+            pontos em Matemática
+          </span>
         </div>
       </div>
 
-      <div className="mt-5" aria-hidden="true">
-        <div className="mb-1 flex justify-between text-xs text-slate-500">
+      <div className="escola-percentil__progress-section">
+        <div className="escola-percentil__progress-labels">
           <span>0</span>
           <span>100</span>
         </div>
-        <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200">
-          <div className="h-full rounded-full bg-blue-600 transition-all duration-500" style={{ width: `${largura}%` }} />
+
+        <div
+          className="escola-percentil__progress"
+          role="progressbar"
+          aria-label="Percentil da nota informada"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={largura}
+        >
+          <div
+            className="escola-percentil__progress-fill"
+            style={{ width: `${largura}%` }}
+          />
         </div>
       </div>
 
-      <p className="mt-4 text-slate-700">
-        Cerca de <strong>{formatarNumero(percentil)}%</strong> das notas válidas de Matemática de quem fez a prova
-        em {uf} são inferiores à sua (notas iguais à sua contam pela metade).
+      <p className="escola-percentil__interpretation">
+        Cerca de <strong>{formatarNumero(desempenho.percentil_usuario)}%</strong>{' '}
+        das notas válidas de Matemática de quem fez a prova em{' '}
+        {uf} são inferiores à sua. Notas iguais à sua contam pela metade.
       </p>
-      <dl className="mt-3 grid gap-1 text-xs text-slate-500 sm:grid-cols-2">
-        <div>
-          <dt className="inline">Base de comparação: </dt>
-          <dd className="inline">{formatarInteiro(desempenho.total_notas_validas_uf)} notas válidas ({desempenho.variavel_nota})</dd>
-        </div>
-        <div>
-          <dt className="inline">Registros sem nota válida (fora da base): </dt>
-          <dd className="inline">{formatarInteiro(desempenho.registros_sem_nota_valida_uf)}</dd>
-        </div>
-        <div className="sm:col-span-2">
-          <dt className="inline">Método: </dt>
-          <dd className="inline">{desempenho.metodo_percentil} Edição {ano}.</dd>
-        </div>
-      </dl>
+
+      <div className="escola-percentil__method">
+        <h3 className="escola-percentil__method-title">
+          Base e metodologia
+        </h3>
+
+        <dl className="escola-percentil__method-grid">
+          <div className="escola-percentil__method-item">
+            <dt>Base de comparação</dt>
+            <dd>
+              {formatarInteiro(desempenho.total_notas_validas_uf)} notas
+              válidas ({desempenho.variavel_nota})
+            </dd>
+          </div>
+
+          <div className="escola-percentil__method-item">
+            <dt>Registros sem nota válida</dt>
+            <dd>
+              {formatarInteiro(
+                desempenho.registros_sem_nota_valida_uf,
+              )}
+            </dd>
+          </div>
+
+          <div className="escola-percentil__method-item escola-percentil__method-item--wide">
+            <dt>Método</dt>
+            <dd>
+              {desempenho.metodo_percentil} · Edição {ano}.
+            </dd>
+          </div>
+        </dl>
+      </div>
     </article>
-  )
+  );
 }
 
 function CartaoComposicao({ composicao, uf }) {
-  const { categorias, excluidos } = composicao
+  if (!composicao) {
+    return null;
+  }
+
+  const categorias = composicao.categorias ?? [];
+  const excluidos = composicao.excluidos ?? [];
+
   const descricaoBarra = categorias
-    .map((c) => `${c.rotulo}: ${formatarNumero(c.percentual_validos)}%`)
-    .join('; ')
+    .map(
+      (categoria) =>
+        `${categoria.rotulo}: ${formatarNumero(
+          categoria.percentual_validos,
+        )}%`,
+    )
+    .join('; ');
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-slate-50 p-6" aria-labelledby="titulo-composicao">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Análise B · Perfil dos participantes da UF</p>
-      <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+    <article
+      className="escola-card escola-composicao"
+      aria-labelledby="titulo-composicao"
+    >
+      <header className="escola-card__header">
         <div>
-          <h2 id="titulo-composicao" className="text-xl font-semibold text-slate-900">
+          <p className="escola-card__eyebrow">
+            ANÁLISE B · PERFIL DA UF
+          </p>
+
+          <h2
+            id="titulo-composicao"
+            className="escola-card__title"
+          >
             Composição por tipo de escola · {uf}
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Percentuais calculados sobre os registros com dependência administrativa classificada (pública ou privada).
+
+          <p className="escola-card__subtitle">
+            Distribuição dos registros com dependência administrativa
+            classificada como pública ou privada.
           </p>
         </div>
-        <p className="text-sm text-slate-600">
-          Válidos: <strong>{formatarInteiro(composicao.total_validos)}</strong> de{' '}
-          {formatarInteiro(composicao.total_registros_uf)} registros
-          {composicao.cobertura !== null && composicao.cobertura !== undefined && (
-            <> · cobertura <strong>{formatarNumero(composicao.cobertura)}%</strong></>
-          )}
-        </p>
+      </header>
+
+      <div className="escola-composicao__metrics">
+        <div className="escola-composicao__metric">
+          <span className="escola-composicao__metric-label">
+            Registros válidos
+          </span>
+
+          <strong className="escola-composicao__metric-value">
+            {formatarInteiro(composicao.total_validos)}
+          </strong>
+
+          <span className="escola-composicao__metric-caption">
+            Com escola identificada
+          </span>
+        </div>
+
+        <div className="escola-composicao__metric">
+          <span className="escola-composicao__metric-label">
+            Total de registros da UF
+          </span>
+
+          <strong className="escola-composicao__metric-value">
+            {formatarInteiro(composicao.total_registros_uf)}
+          </strong>
+
+          <span className="escola-composicao__metric-caption">
+            Base agregada da unidade
+          </span>
+        </div>
+
+        <div className="escola-composicao__metric escola-composicao__metric--coverage">
+          <span className="escola-composicao__metric-label">
+            Cobertura
+          </span>
+
+          <strong className="escola-composicao__metric-value">
+            {composicao.cobertura === null ||
+            composicao.cobertura === undefined
+              ? '—'
+              : `${formatarNumero(composicao.cobertura)}%`}
+          </strong>
+
+          <span className="escola-composicao__metric-caption">
+            Parcela com classificação disponível
+          </span>
+        </div>
       </div>
 
       {!composicao.mapeamento_confirmado && (
-        <div role="note" className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-          <strong>Composição provisória:</strong> {composicao.fonte_mapeamento}
+        <div
+          className="escola-composicao__notice escola-composicao__notice--warning"
+          role="note"
+        >
+          <strong>Composição provisória.</strong>{' '}
+          {composicao.fonte_mapeamento}
         </div>
       )}
 
-      <div role="note" className="mt-4 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-600">
-        A composição usa a <strong>dependência administrativa</strong> da escola de conclusão
-        (pública = Federal/Estadual/Municipal; privada = Privada). Ela cobre apenas os registros
-        com escola identificada no Censo Escolar — a <strong>cobertura</strong> de{' '}
-        {formatarNumero(composicao.cobertura)}% indica essa parcela e não representa todos os inscritos ou presentes da UF.
+      <div
+        className="escola-composicao__notice"
+        role="note"
+      >
+        A classificação usa a <strong>dependência administrativa</strong>{' '}
+        da escola de conclusão: pública (Federal, Estadual ou Municipal)
+        e privada. A composição cobre apenas os registros com escola
+        identificada no Censo Escolar. A cobertura indica essa parcela e
+        não representa todos os inscritos ou presentes da UF.
       </div>
 
-      <div className="mt-5">
-        <div
-          role="img"
-          aria-label={`Distribuição entre os participantes válidos — ${descricaoBarra}`}
-          className="flex h-6 w-full overflow-hidden rounded-full bg-slate-200"
-        >
-          {categorias.map((c) => (
-            <div
-              key={c.chave}
-              className={`${CORES_CATEGORIA[c.chave] || 'bg-slate-500'} h-full`}
-              style={{ width: `${Number(c.percentual_validos) || 0}%` }}
-            />
-          ))}
+      <section className="escola-composicao__distribution">
+        <div className="escola-composicao__section-heading">
+          <h3>Distribuição dos registros válidos</h3>
+          <p>Percentuais calculados sobre o total válido.</p>
         </div>
-        <ul className="mt-2 flex flex-wrap gap-4 text-xs text-slate-600" aria-hidden="true">
-          {categorias.map((c) => (
-            <li key={c.chave} className="flex items-center gap-2">
-              <span className={`inline-block h-3 w-3 rounded-sm ${CORES_CATEGORIA[c.chave] || 'bg-slate-500'}`} />
-              {c.rotulo}
-            </li>
-          ))}
-        </ul>
-      </div>
 
-      <div className="mt-5 overflow-x-auto">
-        <table className="w-full min-w-[480px] text-left text-sm">
-          <caption className="sr-only">Quantidade e percentual de participantes por tipo de escola em {uf}</caption>
-          <thead className="text-xs uppercase text-slate-500">
-            <tr>
-              <th scope="col" className="py-2 pr-4">Categoria</th>
-              <th scope="col" className="py-2 pr-4 text-right">Participantes</th>
-              <th scope="col" className="py-2 pr-4 text-right">% dos válidos</th>
-              <th scope="col" className="py-2 text-right">% do total da UF</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200 bg-white">
-            {categorias.map((c) => (
-              <tr key={c.chave}>
-                <th scope="row" className="px-3 py-2 font-medium text-slate-800">{c.rotulo}</th>
-                <td className="py-2 pr-4 text-right">{formatarInteiro(c.quantidade)}</td>
-                <td className="py-2 pr-4 text-right font-semibold">{formatarNumero(c.percentual_validos)}%</td>
-                <td className="py-2 pr-3 text-right text-slate-500">{formatarNumero(c.percentual_total)}%</td>
+        {categorias.length > 0 ? (
+          <>
+            <div
+              className="escola-composicao__bar"
+              role="img"
+              aria-label={`Distribuição entre participantes válidos: ${descricaoBarra}`}
+            >
+              {categorias.map((categoria) => {
+                const percentual = Number(categoria.percentual_validos);
+                const largura = Number.isFinite(percentual)
+                  ? Math.min(Math.max(percentual, 0), 100)
+                  : 0;
+
+                return (
+                  <span
+                    key={categoria.chave}
+                    className={`escola-composicao__segment ${
+                      CLASSES_CATEGORIA[categoria.chave] ??
+                      'escola-composicao__segment--other'
+                    }`}
+                    style={{ width: `${largura}%` }}
+                  />
+                );
+              })}
+            </div>
+
+            <ul className="escola-composicao__legend">
+              {categorias.map((categoria) => (
+                <li key={categoria.chave}>
+                  <span
+                    className={`escola-composicao__legend-swatch ${
+                      CLASSES_CATEGORIA[categoria.chave] ??
+                      'escola-composicao__legend-swatch--other'
+                    }`}
+                    aria-hidden="true"
+                  />
+
+                  <span className="escola-composicao__legend-name">
+                    {categoria.rotulo}
+                  </span>
+
+                  <strong>
+                    {formatarNumero(categoria.percentual_validos)}%
+                  </strong>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p className="escola-composicao__empty">
+            Não há categorias válidas disponíveis para esta UF.
+          </p>
+        )}
+      </section>
+
+      <section className="escola-composicao__table-section">
+        <div className="escola-composicao__section-heading">
+          <h3>Detalhamento por categoria</h3>
+          <p>
+            Quantidade de registros e participação relativa na base.
+          </p>
+        </div>
+
+        <div className="escola-composicao__table-wrapper">
+          <table className="escola-composicao__table">
+            <caption>
+              Quantidade e percentual de participantes por tipo de escola
+              em {uf}
+            </caption>
+
+            <thead>
+              <tr>
+                <th scope="col">Categoria</th>
+                <th scope="col">Participantes</th>
+                <th scope="col">% dos válidos</th>
+                <th scope="col">% do total da UF</th>
               </tr>
-            ))}
-            <tr className="bg-slate-100">
-              <th scope="row" className="px-3 py-2 font-semibold text-slate-800">Total válido</th>
-              <td className="py-2 pr-4 text-right font-semibold">{formatarInteiro(composicao.total_validos)}</td>
-              <td className="py-2 pr-4 text-right">100%*</td>
-              <td className="py-2 pr-3 text-right text-slate-500">—</td>
-            </tr>
-          </tbody>
-        </table>
-        <p className="mt-1 text-xs text-slate-500">* A soma dos percentuais exibidos pode diferir de 100% em até 0,01 ponto por arredondamento.</p>
-      </div>
+            </thead>
 
-      <details className="mt-5 rounded-lg border border-slate-200 bg-white p-4">
-        <summary className="cursor-pointer text-sm font-medium text-slate-700">
-          Registros fora do denominador válido: {formatarInteiro(composicao.total_excluidos)}
+            <tbody>
+              {categorias.map((categoria) => (
+                <tr key={categoria.chave}>
+                  <th scope="row">{categoria.rotulo}</th>
+                  <td>{formatarInteiro(categoria.quantidade)}</td>
+                  <td className="escola-composicao__table-emphasis">
+                    {formatarNumero(categoria.percentual_validos)}%
+                  </td>
+                  <td>
+                    {formatarNumero(categoria.percentual_total)}%
+                  </td>
+                </tr>
+              ))}
+
+              <tr className="escola-composicao__table-total">
+                <th scope="row">Total válido</th>
+                <td>{formatarInteiro(composicao.total_validos)}</td>
+                <td>100%</td>
+                <td>—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p className="escola-composicao__footnote">
+          * A soma dos percentuais exibidos pode diferir de 100% em até
+          0,01 ponto por arredondamento.
+        </p>
+      </section>
+
+      <details className="escola-composicao__excluded">
+        <summary>
+          <span>
+            Registros fora do denominador válido
+          </span>
+
+          <strong>
+            {formatarInteiro(composicao.total_excluidos)}
+          </strong>
         </summary>
-        <ul className="mt-3 space-y-1 text-sm text-slate-600">
-          {excluidos.map((e) => (
-            <li key={`${e.chave}-${e.codigo ?? 'nulo'}`} className="flex justify-between gap-4">
-              <span>{e.rotulo}</span>
-              <span>
-                {formatarInteiro(e.quantidade)}{' '}
-                <span className="text-slate-400">({formatarNumero(e.percentual_total)}% do total)</span>
-              </span>
-            </li>
-          ))}
-        </ul>
+
+        {excluidos.length > 0 ? (
+          <ul>
+            {excluidos.map((item) => (
+              <li key={`${item.chave}-${item.codigo ?? 'nulo'}`}>
+                <span>{item.rotulo}</span>
+
+                <span className="escola-composicao__excluded-value">
+                  {formatarInteiro(item.quantidade)}
+                  <small>
+                    {` (${formatarNumero(item.percentual_total)}% do total)`}
+                  </small>
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>Não há detalhes de exclusão disponíveis.</p>
+        )}
       </details>
     </article>
-  )
+  );
 }
 
-function FiltroEscola() {
-  const [estado, setEstado] = useState('')
-  const [nota, setNota] = useState('')
-  const [errosCampos, setErrosCampos] = useState({})
-  const [resultado, setResultado] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [erro, setErro] = useState('')
+function Escola() {
+  const [estado, setEstado] = useState('');
+  const [nota, setNota] = useState('');
+  const [errosCampos, setErrosCampos] = useState({});
+  const [resultado, setResultado] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState('');
 
   async function handleSubmit(event) {
-    event.preventDefault()
-    setErro('')
+    event.preventDefault();
+    setErro('');
 
-    const erros = validarCampos(estado, nota)
-    setErrosCampos(erros)
-    if (Object.keys(erros).length > 0) return
+    const erros = validarCampos(estado, nota);
+    setErrosCampos(erros);
 
-    setResultado(null)
-    setLoading(true)
+    if (Object.keys(erros).length > 0) {
+      return;
+    }
+
+    setResultado(null);
+    setLoading(true);
+
     try {
       const resposta = await consultarEscola({
         estado,
         nota_matematica: Number(nota.trim().replace(',', '.')),
-      })
-      setResultado(resposta.dados)
+      });
+
+      setResultado(resposta.dados);
     } catch (error) {
-      setErro(error.message)
+      setErro(
+        error?.message ||
+          'Não foi possível calcular a análise. Tente novamente.',
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
-  const classeCampo = (temErro) =>
-    `w-full rounded-lg border bg-white p-3 text-slate-900 outline-none focus:ring-2 ${
-      temErro ? 'border-red-400 focus:border-red-500 focus:ring-red-100' : 'border-slate-300 focus:border-blue-500 focus:ring-blue-100'
-    }`
-
   return (
-    <>
-      <NavBar />
+    <div className="escola-page">
+      <main className="escola-page__main">
+        <div className="escola-page__container">
+          <header className="escola-page__header">
+            <p className="escola-page__eyebrow">
+              RADAR ENEM / ANÁLISE EDUCACIONAL
+            </p>
 
-      <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-      <header className="mb-8">
-        <p className="font-semibold text-blue-600">Filtro 4 · Tipo de escola</p>
-        <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">
-          Tipo de escola: pública × privada
-        </h1>
-        <p className="mt-3 max-w-3xl text-slate-600">
-          Veja a posição da sua nota de Matemática entre os participantes presentes na prova na mesma UF e,
-          separadamente, como as escolas de conclusão identificadas se distribuem entre rede pública e privada
-          (dependência administrativa, ENEM 2025).
-        </p>
-      </header>
+            <h1 className="escola-page__title">
+              Tipo de escola: pública × privada
+            </h1>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(260px,340px)_1fr]">
-        <section className="h-fit rounded-2xl bg-white p-6 shadow-sm" aria-labelledby="titulo-parametros">
-          <h2 id="titulo-parametros" className="text-lg font-semibold text-slate-900">Parâmetros da consulta</h2>
-          <p className="mt-1 text-sm text-slate-500">Todos os campos são obrigatórios.</p>
+            <p className="escola-page__description">
+              Consulte sua posição relativa em Matemática na UF da prova
+              e visualize, separadamente, a distribuição agregada das
+              escolas de conclusão identificadas entre as redes pública
+              e privada.
+            </p>
+          </header>
 
-          <form onSubmit={handleSubmit} noValidate className="mt-5 space-y-5">
-            <div>
-              <label htmlFor="uf-escola" className="mb-2 block text-sm font-medium text-slate-700">
-                Unidade da Federação (UF da prova)
-              </label>
-              <select
-                id="uf-escola"
-                value={estado}
-                onChange={(event) => setEstado(event.target.value)}
-                aria-invalid={Boolean(errosCampos.estado)}
-                aria-describedby={errosCampos.estado ? 'erro-uf-escola' : undefined}
-                className={classeCampo(errosCampos.estado)}
+          <div className="escola-page__layout">
+            <aside className="escola-page__form-card">
+              <div className="escola-page__form-heading">
+                <span className="escola-page__step">01</span>
+
+                <div>
+                  <h2>Parâmetros da consulta</h2>
+                  <p>Todos os campos são obrigatórios.</p>
+                </div>
+              </div>
+
+              <form
+                onSubmit={handleSubmit}
+                noValidate
+                className="escola-form"
               >
-                <option value="">Selecione a UF</option>
-                {UFS.map((uf) => <option value={uf} key={uf}>{uf}</option>)}
-              </select>
-              {errosCampos.estado && (
-                <p id="erro-uf-escola" className="mt-1 text-xs text-red-700">{errosCampos.estado}</p>
-              )}
-            </div>
+                <div className="escola-form__field">
+                  <label htmlFor="uf-escola">
+                    Unidade da Federação
+                  </label>
 
-            <div>
-              <label htmlFor="nota-escola" className="mb-2 block text-sm font-medium text-slate-700">
-                Sua nota de Matemática
-              </label>
-              <input
-                id="nota-escola"
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                value={nota}
-                onChange={(event) => setNota(event.target.value)}
-                placeholder="Ex.: 720,5"
-                aria-invalid={Boolean(errosCampos.nota)}
-                aria-describedby={errosCampos.nota ? 'erro-nota-escola ajuda-nota-escola' : 'ajuda-nota-escola'}
-                className={classeCampo(errosCampos.nota)}
-              />
-              <p id="ajuda-nota-escola" className="mt-1 text-xs text-slate-500">Valor entre 0 e 1000 pontos.</p>
-              {errosCampos.nota && (
-                <p id="erro-nota-escola" className="mt-1 text-xs text-red-700">{errosCampos.nota}</p>
-              )}
-            </div>
+                  <span className="escola-form__hint">
+                    UF onde você realizou a prova
+                  </span>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  <select
+                    id="uf-escola"
+                    value={estado}
+                    onChange={(event) => setEstado(event.target.value)}
+                    aria-invalid={Boolean(errosCampos.estado)}
+                    aria-describedby={
+                      errosCampos.estado ? 'erro-uf-escola' : undefined
+                    }
+                    className={
+                      errosCampos.estado
+                        ? 'escola-form__input escola-form__input--error'
+                        : 'escola-form__input'
+                    }
+                  >
+                    <option value="">Selecione a UF</option>
+
+                    {UFS.map((uf) => (
+                      <option value={uf} key={uf}>
+                        {uf}
+                      </option>
+                    ))}
+                  </select>
+
+                  {errosCampos.estado && (
+                    <p
+                      id="erro-uf-escola"
+                      className="escola-form__error"
+                    >
+                      {errosCampos.estado}
+                    </p>
+                  )}
+                </div>
+
+                <div className="escola-form__field">
+                  <label htmlFor="nota-escola">
+                    Sua nota de Matemática
+                  </label>
+
+                  <input
+                    id="nota-escola"
+                    type="text"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    value={nota}
+                    onChange={(event) => setNota(event.target.value)}
+                    placeholder="Ex.: 720,5"
+                    aria-invalid={Boolean(errosCampos.nota)}
+                    aria-describedby={
+                      errosCampos.nota
+                        ? 'erro-nota-escola ajuda-nota-escola'
+                        : 'ajuda-nota-escola'
+                    }
+                    className={
+                      errosCampos.nota
+                        ? 'escola-form__input escola-form__input--error'
+                        : 'escola-form__input'
+                    }
+                  />
+
+                  <p
+                    id="ajuda-nota-escola"
+                    className="escola-form__hint"
+                  >
+                    Informe um valor entre 0 e 1000 pontos.
+                  </p>
+
+                  {errosCampos.nota && (
+                    <p
+                      id="erro-nota-escola"
+                      className="escola-form__error"
+                    >
+                      {errosCampos.nota}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="escola-form__submit"
+                >
+                  {loading ? 'Calculando análise…' : 'Calcular análise'}
+                </button>
+              </form>
+
+              <div className="escola-page__reference">
+                <h3>Sobre esta consulta</h3>
+
+                <p>
+                  Referência: microdados do ENEM 2025 (INEP). A UF
+                  considerada é a do local de prova.
+                </p>
+
+                <p>
+                  A composição por tipo de escola é um indicador agregado
+                  da UF, sem ligação individual com a nota informada.
+                </p>
+              </div>
+            </aside>
+
+            <section
+              className="escola-page__results"
+              aria-live="polite"
+              aria-busy={loading}
             >
-              {loading ? 'Calculando…' : 'Calcular análise'}
-            </button>
-          </form>
+              {erro && (
+                <div className="escola-page__alert" role="alert">
+                  <strong>Não foi possível concluir a análise</strong>
+                  <p>{erro}</p>
+                </div>
+              )}
 
-          <p className="mt-5 border-t border-slate-100 pt-4 text-xs leading-5 text-slate-500">
-            Referência: microdados do ENEM 2025 (INEP). A UF considerada é a do local de prova. A composição por tipo
-            de escola é um indicador agregado da UF, não uma característica ligada à nota informada.
-          </p>
-        </section>
+              {!resultado && !erro && !loading && (
+                <div className="escola-page__empty">
+                  <span className="escola-page__empty-marker">
+                    02
+                  </span>
 
-        <section aria-live="polite" aria-busy={loading} className="space-y-6">
-          {erro && (
-            <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-              {erro}
-            </div>
-          )}
+                  <h2>Sua análise aparecerá aqui</h2>
 
-          {!resultado && !erro && !loading && (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-              <h2 className="font-semibold text-slate-800">Sua análise aparecerá aqui</h2>
-              <p className="mt-2 text-sm text-slate-500">
-                Escolha a UF e informe sua nota de Matemática para ver seu percentil e a distribuição por tipo de escola.
-              </p>
-            </div>
-          )}
+                  <p>
+                    Escolha a UF e informe sua nota de Matemática para
+                    visualizar seu percentil e a composição por tipo de
+                    escola.
+                  </p>
+                </div>
+              )}
 
-          {loading && (
-            <div className="rounded-xl bg-blue-50 p-4 text-blue-800">Calculando com os dados de referência do ENEM 2025…</div>
-          )}
+              {loading && (
+                <div className="escola-page__loading" role="status">
+                  <span className="escola-page__loading-indicator" />
 
-          {resultado && (
-            <>
-              <CartaoPercentil
-                desempenho={resultado.desempenho}
-                uf={resultado.estado_referencia}
-                ano={resultado.ano_referencia}
-              />
-              <CartaoComposicao composicao={resultado.composicao_escolar} uf={resultado.estado_referencia} />
-              <aside className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-                <strong>Como interpretar:</strong> {resultado.nota_metodologica} As duas análises acima não devem ser
-                lidas como comparação de desempenho entre escolas públicas e privadas.
-              </aside>
-            </>
-          )}
-        </section>
-      </div>
+                  <div>
+                    <strong>Calculando sua análise</strong>
+                    <p>
+                      Processando os dados de referência do ENEM 2025…
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {resultado && (
+                <>
+                  <div className="escola-page__results-heading">
+                    <div>
+                      <p className="escola-page__eyebrow">
+                        ANÁLISE CONCLUÍDA
+                      </p>
+
+                      <h2>Resultados da consulta</h2>
+
+                      <p>
+                        Referência: {resultado.estado_referencia} · ENEM{' '}
+                        {resultado.ano_referencia}
+                      </p>
+                    </div>
+                  </div>
+
+                  <CartaoPercentil
+                    desempenho={resultado.desempenho}
+                    uf={resultado.estado_referencia}
+                    ano={resultado.ano_referencia}
+                  />
+
+                  <CartaoComposicao
+                    composicao={resultado.composicao_escolar}
+                    uf={resultado.estado_referencia}
+                  />
+
+                  <aside className="escola-page__methodology">
+                    <span className="escola-page__methodology-label">
+                      Como interpretar
+                    </span>
+
+                    <p>
+                      {resultado.nota_metodologica}{' '}
+                      As duas análises não devem ser interpretadas como
+                      comparação de desempenho entre escolas públicas e
+                      privadas.
+                    </p>
+                  </aside>
+                </>
+              )}
+            </section>
+          </div>
+        </div>
       </main>
-    </>
-  )
+    </div>
+  );
 }
 
-export default FiltroEscola
+export default Escola;
