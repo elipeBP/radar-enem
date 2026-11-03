@@ -1,0 +1,25 @@
+
+.nav-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px 24px 0;
+}
+
+.nav-bar__link {
+  padding: 8px 14px;
+  border-radius: 999px;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.nav-bar__link:hover {
+  background: var(--color-surface-secondary);
+}
+
+.nav-bar__link--active {
+  background: var(--color-primary);
+  color: #ffffff;
+}
