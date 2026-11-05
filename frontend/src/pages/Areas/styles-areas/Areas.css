@@ -1,0 +1,28 @@
+
+.areas-page {
+  min-height: 100vh;
+  background: var(--color-background);
+}
+
+.areas-page__main {
+  padding: 24px 16px 48px;
+}
+
+.areas-page__container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.areas-page__error {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-card);
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.areas-page__result {
+  margin-top: 20px;
+}
