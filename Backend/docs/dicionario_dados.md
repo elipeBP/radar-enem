@@ -69,6 +69,55 @@ participantes — o próprio dicionário do INEP 2025 indica que `NU_SEQUENCIAL`
 dependência ficam na mesma linha de resultados, mas são tratadas como estatísticas
 separadas (ver `Backend/docs/filtro_tipo_escola_av4.md`).
 
+## AV4 — Faixa etária (`TP_FAIXA_ETARIA`) — confirmado no dicionário 2025
+
+> Seção complementar da issue [#52 — Filtro 5: Faixa Etária](https://github.com/elipeBP/radar-enem/issues/52).
+> Não altera as seções acima; apenas acrescenta o mapeamento usado pelo Filtro 5.
+
+A issue #52 usa a faixa etária do participante na Camada 2 (composição
+demográfica, sem nota). A variável confirmada no dicionário oficial de 2025 é
+**`TP_FAIXA_ETARIA`**, da base de **PARTICIPANTES** (mesma base de `TP_SEXO`) —
+20 categorias, códigos 1 a 20:
+
+| Código | Descrição oficial 2025 |
+|---|---|
+| 1 | Menor de 17 anos |
+| 2 | 17 anos |
+| 3 | 18 anos |
+| 4 | 19 anos |
+| 5 | 20 anos |
+| 6 | 21 anos |
+| 7 | 22 anos |
+| 8 | 23 anos |
+| 9 | 24 anos |
+| 10 | 25 anos |
+| 11 | Entre 26 e 30 anos |
+| 12 | Entre 31 e 35 anos |
+| 13 | Entre 36 e 40 anos |
+| 14 | Entre 41 e 45 anos |
+| 15 | Entre 46 e 50 anos |
+| 16 | Entre 51 e 55 anos |
+| 17 | Entre 56 e 60 anos |
+| 18 | Entre 61 e 65 anos |
+| 19 | Entre 66 e 70 anos |
+| 20 | Maior de 70 anos |
+
+Fonte: `Dicionario/Dicionário_Microdados_Enem_2025.xlsx`, aba `PARTICIPANTES_2025`
+(`TP_FAIXA_ETARIA` = "Faixa etária").
+
+**Checklist de confirmação:**
+
+- [x] Variável e códigos conferidos no dicionário oficial 2025 (aba `PARTICIPANTES_2025`)
+- [x] Categorias oficiais 2025 transcritas aqui (código → descrição)
+- [x] Coluna adicionada a `COLUNAS_PARTICIPANTES` em `etl/ingestion.py`
+- [x] `participantes_2025.parquet` regerado e validado: os 20 códigos observados
+      nos 4.810.772 registros batem exatamente com 1–20 (sem nulos, sem código
+      fora do intervalo oficial)
+
+**Agrupamento em faixas (ex: até 19, 20–25, 26–35, 36+) e a lógica do filtro em
+si** ficam fora do escopo deste ticket de ingestão — são a implementação
+individual do #52.
+
 ## ⚠️ BLOQUEIO CRÍTICO — sem chave de junção entre as bases
 
 O próprio Dicionário de Dados oficial do INEP declara, em nota de rodapé
@@ -140,8 +189,13 @@ linhas), com seleção de colunas na leitura e compressão zstd na escrita.
 
 | Arquivo | Linhas | Colunas | Tamanho |
 |---|---|---|---|
-| `resultados_2025.parquet` | 4.810.772 | `SG_UF_PROVA`, `NU_NOTA_CN`, `NU_NOTA_CH`, `NU_NOTA_LC`, `NU_NOTA_MT`, `NU_NOTA_REDACAO` | 39,99 MB |
-| `participantes_2025.parquet` | 4.810.772 | `TP_SEXO`, `SG_UF_PROVA` | 3,32 MB |
+| `resultados_2025.parquet` | 4.810.772 | `SG_UF_PROVA`, `NU_NOTA_CN`, `NU_NOTA_CH`, `NU_NOTA_LC`, `NU_NOTA_MT`, `NU_NOTA_REDACAO`, `TP_PRESENCA_MT`, `TP_DEPENDENCIA_ADM_ESC` | 41,49 MB |
+| `participantes_2025.parquet` | 4.810.772 | `SG_UF_PROVA`, `TP_SEXO`, `TP_FAIXA_ETARIA` | 5,67 MB |
+
+> Atualizado após a ingestão de 2026-11-05 (adição de `TP_FAIXA_ETARIA` para o
+> #52). As colunas `TP_PRESENCA_MT`/`TP_DEPENDENCIA_ADM_ESC` (#51) já estavam
+> na base de resultados desde a ingestão anterior; a linha acima só não
+> refletia o tamanho/colunas atualizados até agora.
 
 Gerado por `Backend/etl/ingestion.py` (compressão zstd). Os arquivos não
 são commitados no repositório (cobertos pelo `.gitignore`) — a entrega ao
