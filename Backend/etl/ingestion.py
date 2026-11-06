@@ -53,12 +53,15 @@ COLUNAS_RESULTADOS = [
 ]
 
 # Escopo atual: so as colunas ja mapeadas oficialmente no #33/#42.
-# As colunas demograficas dos outros 3 modulos (Abismo Digital, Peso do
-# CEP, Equidade de Escolas) ainda nao tem dicionario proprio -- quando
-# tiverem, essa lista cresce.
+# TP_FAIXA_ETARIA (AV4 / Issue #52): faixa etaria do participante, codigos
+# 1-20 conforme o dicionario oficial do INEP. Vive em PARTICIPANTES (mesma
+# base de TP_SEXO), nao em RESULTADOS -- entra na Camada 2 (composicao
+# demografica, sem nota). O agrupamento em faixas e a logica do filtro ficam
+# em core/ (#52), fora do escopo deste ticket de ingestao.
 COLUNAS_PARTICIPANTES = [
     "SG_UF_PROVA",
     "TP_SEXO",
+    "TP_FAIXA_ETARIA",
 ]
 
 # Tipos forcados na leitura dos RESULTADOS (AV4 / Issue #51).
