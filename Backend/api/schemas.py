@@ -14,43 +14,47 @@ Por que separar isso do main.py?
 import math
 
 from pydantic import BaseModel, Field, field_validator
+from pydantic import ConfigDict
 from typing import Literal, Optional
 
 
 class FiltroGenero(BaseModel):
-    """
-    Modelo de entrada para o módulo de análise (ex: Trilha de Gênero nas Exatas).
-
-    Cada campo abaixo é validado automaticamente pelo FastAPI:
-    se o cliente (React) mandar um tipo errado (ex: nota_matematica como
-    string "abc"), a API já rejeita a requisição com erro 422 antes mesmo
-    de chegar na sua função de rota.
-    """
-
-    ano: int = Field(
-        ...,  # "..." = campo obrigatório, sem valor default
-        ge=2009,  # ge = "greater or equal", validação simples de sanidade
-        le=2025,
-        description="Ano de referência da edição do ENEM (ex: 2024)",
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {"ano": 2025, "estados": ["SC"], "nota_matematica": 720.5}
+        }
     )
-    estado: str = Field(
+
+    ano: int = Field(..., ge=2009, le=2025, description="Ano de referência da edição do ENEM")
+    estados: list[str] = Field(
         ...,
-        min_length=2,
-        max_length=2,
-        description="Sigla da UF, ex: 'SC', 'SP'",
+        min_length=1,
+        max_length=27,
+        description="Siglas das UFs onde a prova foi realizada, ex: ['SC', 'SP']",
     )
     nota_matematica: float = Field(
-        ...,
-        ge=0,
-        le=1000,
-        description="Nota do usuário na prova de Matemática (0 a 1000)",
+        ..., ge=0, le=1000, description="Nota do usuário na prova de Matemática (0 a 1000)"
     )
 
-    class Config:
-        # Exemplo que aparece automaticamente na doc interativa (/docs)
-        json_schema_extra = {
-            "example": {"ano": 2024, "estado": "SC", "nota_matematica": 720.5}
-        }
+    @field_validator("estados", mode="before")
+    @classmethod
+    def normalizar_estados(cls, valor):
+        """Normaliza (strip + maiúsculas), remove repetidas e valida cada UF."""
+        if not isinstance(valor, list):
+            return valor
+        vistos, saida = set(), []
+        for item in valor:
+            if not isinstance(item, str):
+                raise ValueError("Cada UF deve ser uma string de 2 letras (ex: 'SC').")
+            uf = item.strip().upper()
+            if uf not in UFS_VALIDAS:
+                raise ValueError(
+                    f"'{item}' não é uma UF brasileira válida, por exemplo SC ou SP."
+                )
+            if uf not in vistos:
+                vistos.add(uf)
+                saida.append(uf)
+        return saida
 
 
 class FiltroAreas(BaseModel):
@@ -80,16 +84,43 @@ class RespostaAreas(BaseModel):
     dados: DadosRespostaAreas
 
 
-class RespostaGenero(BaseModel):
-    """
-    Modelo de saída (mock por enquanto). Ter um modelo de saída também
-    garante que, quando a lógica real substituir o mock, o formato do
-    JSON devolvido para o frontend não muda de surpresa.
-    """
+class NotaPorUFGenero(BaseModel):
+    """Bloco 1 -- fonte RESULTADOS_2025 (nota x UF)."""
 
+    fonte: str
+    nota_usuario: float
+    percentil_usuario: float
+    zscore_usuario: float
+    media_grupo_filtrado: float
+    desvio_padrao_grupo: float
+    total_participantes_com_nota: int
+
+
+class ComposicaoDemograficaGenero(BaseModel):
+    """Bloco 2 -- fonte PARTICIPANTES_2025 (sem nota)."""
+
+    fonte: str
+    total_inscritos: int
+    inscritas_mulheres: int
+    inscritos_homens: int
+    percentual_mulheres: float
+    percentual_homens: float
+
+
+class DadosGenero(BaseModel):
+    ano_referencia: int
+    estados_referencia: list[str]
+    percentil_usuario: float        # compatibilidade com o frontend do #41
+    media_grupo_filtrado: float     # compatibilidade com o frontend do #41
+    nota_por_uf: NotaPorUFGenero
+    composicao_demografica: ComposicaoDemograficaGenero
+    aviso: str
+
+
+class RespostaGenero(BaseModel):
     status: Literal["success", "error"]
     mensagem: str
-    dados: dict
+    dados: DadosGenero
 
 
 # ===========================================================================
