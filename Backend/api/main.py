@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fastapi import FastAPI, HTTPException
+from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from core.analise_areas import analisar_areas
@@ -85,6 +86,7 @@ except ImportError:  # pragma: no cover
     )
 
 from core.dados import carregar_participantes, carregar_resultados
+from core.genero import AnoIndisponivelError, EstadosSemDadosError, analisar_genero
 
 
 @asynccontextmanager
@@ -146,27 +148,39 @@ def health_check():
 
 
 @app.post("/api/dados/genero", response_model=RespostaGenero)
-def analise_genero(filtros: FiltroGenero):
+def analise_genero(filtros: FiltroGenero, request: Request):
     """
-    Rota do módulo "Trilha de Gênero nas Exatas".
+    Rota do módulo "Trilha de Gênero nas Exatas" (#37).
 
-    Ainda devolve um mock (dados simulados) -- ligar essa rota aos
-    DataFrames reais carregados em app.state (via core/estatistica.py)
-    é escopo do #37, não deste ticket (#36). O #36 só garante que os
-    dados reais já estão carregados em memória, prontos pra serem
-    consumidos quando o #37 substituir este mock.
+    Devolve dois blocos independentes: nota x UF (percentil/Z-Score reais,
+    fonte RESULTADOS_2025) e composição demográfica (% de mulheres entre os
+    inscritos, fonte PARTICIPANTES_2025). A regra de negócio fica em
+    core/genero.py; aqui só recebemos, chamamos e traduzimos erros em HTTP.
+
+    Os DataFrames vêm de app.state, preenchido uma vez no startup (#36).
     """
-    dados_mock = {
-        "percentil_usuario": 82.4,
-        "media_grupo_filtrado": 645.3,
-        "ano_referencia": filtros.ano,
-        "estado_referencia": filtros.estado,
-    }
+    df_resultados = getattr(request.app.state, "df_resultados", None)
+    df_participantes = getattr(request.app.state, "df_participantes", None)
+    if df_resultados is None or df_participantes is None:
+        raise HTTPException(status_code=503, detail="Dados ainda não carregados.")
+
+    try:
+        dados = analisar_genero(
+            df_resultados,
+            df_participantes,
+            ano=filtros.ano,
+            estados=filtros.estados,
+            nota_usuario=filtros.nota_matematica,
+        )
+    except AnoIndisponivelError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except EstadosSemDadosError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
 
     return RespostaGenero(
         status="success",
-        mensagem="Dados simulados retornados com sucesso (mock).",
-        dados=dados_mock,
+        mensagem="Análise calculada a partir dos microdados reais do ENEM 2025.",
+        dados=dados,
     )
 
 
