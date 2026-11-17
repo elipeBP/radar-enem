@@ -11,6 +11,8 @@ Por que separar isso do main.py?
 - Facilita testes unitários dos modelos isoladamente.
 """
 
+import math
+
 from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Optional
 
@@ -50,12 +52,15 @@ class FiltroGenero(BaseModel):
             "example": {"ano": 2024, "estado": "SC", "nota_matematica": 720.5}
         }
 
+
 class FiltroAreas(BaseModel):
     nota_cn: float = Field(..., ge=0, le=1000)
     nota_ch: float = Field(..., ge=0, le=1000)
     nota_lc: float = Field(..., ge=0, le=1000)
     nota_mt: float = Field(..., ge=0, le=1000)
     nota_redacao: float = Field(..., ge=0, le=1000)
+
+
 class ResultadoArea(BaseModel):
     area: str
     nota: float
@@ -74,6 +79,7 @@ class RespostaAreas(BaseModel):
     mensagem: str
     dados: DadosRespostaAreas
 
+
 class RespostaGenero(BaseModel):
     """
     Modelo de saída (mock por enquanto). Ter um modelo de saída também
@@ -87,10 +93,10 @@ class RespostaGenero(BaseModel):
 
 
 # ===========================================================================
-# Filtro 4 — Tipo de Escola (AV4, issue #51)
+# Siglas oficiais das 27 unidades da federação (26 estados + DF).
+# Compartilhada pelos filtros que validam UF (Escola, Nota × UF) — uma
+# declaração só, pra não divergir se um dia precisar mudar.
 # ===========================================================================
-# Siglas oficiais das 27 unidades da federação (26 estados + DF). Usadas para
-# validar o campo `estado` do filtro: qualquer sigla fora desta lista é 422.
 UFS_VALIDAS: frozenset[str] = frozenset({
     "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
     "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC",
@@ -98,6 +104,9 @@ UFS_VALIDAS: frozenset[str] = frozenset({
 })
 
 
+# ===========================================================================
+# Filtro 4 — Tipo de Escola (AV4, issue #51)
+# ===========================================================================
 class FiltroEscola(BaseModel):
     """Entrada da rota POST /api/dados/escola.
 
@@ -197,6 +206,62 @@ class RespostaEscola(BaseModel):
     ``dados`` carrega as duas análises independentes (desempenho e composição),
     exatamente como montadas por core.escola.analisar_tipo_escola.
     """
+
+    status: Literal["success", "error"]
+    mensagem: str
+    dados: dict
+
+
+# ===========================================================================
+# Filtro 1 — Nota por Estado (UF) (issue #48)
+# ===========================================================================
+class FiltroNotaUF(BaseModel):
+    """Entrada da consulta de nota por UF e área do ENEM."""
+
+    estado: str = Field(
+        ...,
+        description="Sigla da unidade federativa, por exemplo SC.",
+    )
+
+    area: Literal["CN", "CH", "LC", "MT", "REDACAO"] = Field(
+        ...,
+        description="Área da prova do ENEM.",
+    )
+
+    nota_usuario: float = Field(
+        ...,
+        strict=True,
+        ge=0,
+        le=1000,
+        description="Nota informada pelo usuário, entre 0 e 1000.",
+    )
+
+    @field_validator("estado", mode="before")
+    @classmethod
+    def validar_estado(cls, valor: object) -> str:
+        if not isinstance(valor, str):
+            raise ValueError("Informe uma sigla de UF válida.")
+
+        uf = valor.strip().upper()
+
+        if uf not in UFS_VALIDAS:
+            raise ValueError("Informe uma UF brasileira válida.")
+
+        return uf
+
+    @field_validator("nota_usuario")
+    @classmethod
+    def validar_nota_finita(cls, valor: float) -> float:
+        if not math.isfinite(valor):
+            raise ValueError("A nota deve ser um número finito.")
+
+        return valor
+
+    model_config = {"extra": "forbid"}
+
+
+class RespostaNotaUF(BaseModel):
+    """Resposta da consulta estatística de nota por UF."""
 
     status: Literal["success", "error"]
     mensagem: str
