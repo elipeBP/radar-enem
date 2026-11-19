@@ -1,0 +1,19 @@
+# Blueprint do Render (https://render.com/docs/blueprint-spec).
+# Conectar o repo no Render com este arquivo na raiz evita reconfigurar os
+# campos abaixo manualmente no painel a cada novo serviço/ambiente.
+#
+# PENDENTE (decisão do Felipe, não resolvido aqui): os Parquets de produção
+# (Backend/etl/producao/*.parquet) são gerados localmente e NUNCA
+# commitados (.gitignore) -- o build do Render clona o repo do GitHub, então
+# o contexto de build não os tem. Sem resolver isso, a imagem sobe sem dados
+# e a API responde 503 em produção. Opções: (a) hospedar os dois arquivos
+# como asset de uma GitHub Release e baixar no build/startup, ou (b) outro
+# storage com link estável. Ainda não decidido -- ver conversa com o Claude.
+services:
+  - type: web
+    name: radar-enem
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/health
