@@ -51,13 +51,19 @@ Com os dois no ar, o Dashboard mostra o status da conexão com a API em tempo re
 ## Arquitetura
 
 ```
-CSV bruto (INEP) --[ETL offline, Polars]--> Parquet otimizado --> Azure Blob Storage --> App Service (Parquet local) --> API (FastAPI) <--> Frontend (React, Azure Static Web Apps)
+CSV bruto (INEP) --[ETL offline, Polars]--> Parquet otimizado --[empacotado na imagem Docker]--> Container único (FastAPI + build do React) --> Render (Web Service)
 ```
 
 - ETL roda offline (não em tempo real): lê o CSV bruto, seleciona e tipa as colunas necessárias, e
   gera um Parquet comprimido.
-- A API nunca lê o CSV bruto nem consulta o Blob Storage por requisição — ela lê um Parquet local
-  sincronizado no App Service no deploy.
+- A API nunca lê o CSV bruto por requisição — ela lê um Parquet local, copiado para dentro da
+  própria imagem Docker no build (ver `Dockerfile`), não baixado de um storage externo.
+- Frontend e backend sobem num container único: o build de produção do React é servido
+  estaticamente pela própria API FastAPI (`StaticFiles`), na mesma porta — decisão que simplifica
+  o deploy (um serviço só, não dois) e evita problema de CORS/origem em produção.
+- Hospedagem: [Render](https://render.com), free tier, por não exigir aprovação institucional nem
+  cartão de crédito para rodar um serviço Docker gratuito — pivô em relação ao plano original com
+  Azure (ver "Status" abaixo).
 - Cada módulo de análise (Trilha de Gênero nas Exatas, Abismo Digital, Peso do CEP, Equidade de
   Escolas) segue o mesmo padrão: uma rota `POST /api/dados/<módulo>`, um par de schemas Pydantic
   (`FiltroX`/`RespostaX`), e o mesmo motor estatístico de percentil/Z-Score, calculado sobre
@@ -70,7 +76,7 @@ Decisões detalhadas de arquitetura: [issue #22](../../issues/22).
 
 | Pessoa | Papel |
 |---|---|
-| Felipe Benites | Tech Lead, Cloud/DevOps — dono do repositório, revisa e aprova todos os PRs, integração Front↔Back, provisionamento Azure |
+| Felipe Benites | Tech Lead, Cloud/DevOps — dono do repositório, revisa e aprova todos os PRs, integração Front↔Back, provisionamento da hospedagem |
 | Jade Oliveira | Frontend — React (Vite + Tailwind) |
 | Rafael Nunes Almeida | Dados/Backend — FastAPI + ETL (Polars) |
 | Maykon Douglas | Documentação — relatórios e apresentações entregues no AVA |
@@ -87,5 +93,11 @@ Decisões detalhadas de arquitetura: [issue #22](../../issues/22).
 ## Status
 
 Sprint 1 (ambiente 100% local) concluída — ver [issues fechadas](../../issues?q=is%3Aissue+is%3Aclosed).
-Sprint 2 em andamento: provisionamento Azure ([#17](../../issues/17)) e implementação real dos
-endpoints de análise ([#34](../../issues/34)–[#37](../../issues/37), [#44](../../issues/44)).
+Sprint 2 em andamento: implementação real dos endpoints de análise (#34–#52, ver issues) e
+deploy público ([#17](../../issues/17)).
+
+**Pivô de infraestrutura (11/2026):** a aprovação institucional da conta Azure for Students não
+saiu a tempo do prazo da disciplina. Trocamos para [Render](https://render.com) — free tier com
+suporte nativo a Docker, sem exigir aprovação de organização nem cartão de crédito. O container
+único (`Dockerfile` na raiz) já estava pronto desde a avaliação original do Azure e não precisou
+mudar — só o destino do deploy.
