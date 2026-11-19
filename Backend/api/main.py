@@ -33,6 +33,8 @@ try:
         RespostaAreas,
         FiltroEscola,
         RespostaEscola,
+        FiltroNotaUF,
+        RespostaNotaUF,
     )
 except ImportError:
     # Funciona quando você roda a partir da raiz de Backend/:
@@ -44,25 +46,42 @@ except ImportError:
         RespostaAreas,
         FiltroEscola,
         RespostaEscola,
+        FiltroNotaUF,
+        RespostaNotaUF,
     )
 
-# core/escola.py vive fora de api/. Suporta os dois modos de execução (de
-# dentro de api/ ou a partir da raiz do Backend), como já feito com os schemas.
+# core/escola.py e core/nota_uf.py vivem fora de api/. Suportam os dois modos
+# de execução (de dentro de api/ ou a partir da raiz do Backend), como já
+# feito com os schemas.
+#
+# IMPORTANTE: os dois módulos definem suas próprias classes
+# DadosIndisponiveisError/UFsemDadosError, independentes uma da outra. Importar
+# as duas sem alias faria a segunda sobrescrever a primeira no namespace deste
+# arquivo, e o "except" da rota que importou primeiro pararia de capturar a
+# exceção certa (viraria 500 não tratado em vez de 404/503). Por isso cada
+# conjunto usa seu próprio par de nomes.
 try:
     from core.escola import (
         analisar_tipo_escola,
-        DadosIndisponiveisError,
-        UFsemDadosError,
+        DadosIndisponiveisError as DadosIndisponiveisErrorEscola,
+        UFsemDadosError as UFsemDadosErrorEscola,
+    )
+    from core.nota_uf import (
+        analisar_nota_uf,
+        DadosIndisponiveisError as DadosIndisponiveisErrorNotaUF,
+        UFsemDadosError as UFsemDadosErrorNotaUF,
     )
 except ImportError:  # pragma: no cover
-    import sys
-    from pathlib import Path
-
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from core.escola import (
         analisar_tipo_escola,
-        DadosIndisponiveisError,
-        UFsemDadosError,
+        DadosIndisponiveisError as DadosIndisponiveisErrorEscola,
+        UFsemDadosError as UFsemDadosErrorEscola,
+    )
+    from core.nota_uf import (
+        analisar_nota_uf,
+        DadosIndisponiveisError as DadosIndisponiveisErrorNotaUF,
+        UFsemDadosError as UFsemDadosErrorNotaUF,
     )
 
 from core.dados import carregar_participantes, carregar_resultados
@@ -190,10 +209,10 @@ def analise_tipo_escola(filtros: FiltroEscola):
             estado=filtros.estado,
             nota_matematica=filtros.nota_matematica,
         )
-    except UFsemDadosError as exc:
+    except UFsemDadosErrorEscola as exc:
         # UF válida sintaticamente, mas sem dados utilizáveis na base.
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except DadosIndisponiveisError as exc:
+    except DadosIndisponiveisErrorEscola as exc:
         # Falha de dados no servidor (Parquet ausente/corrompido/sem colunas).
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
@@ -211,3 +230,29 @@ def analise_tipo_escola(filtros: FiltroEscola):
             " (apenas quem teve a escola de conclusão identificada no Censo Escolar)."
         )
     return RespostaEscola(status="success", mensagem=mensagem, dados=dados)
+
+
+@app.post("/api/dados/uf", response_model=RespostaNotaUF)
+def analise_nota_uf(filtros: FiltroNotaUF):
+    """Rota do Filtro 1 — Nota × Estado (issue #48).
+
+    Consulta o percentil e o Z-Score da nota em relação à UF e área escolhidas.
+    """
+    try:
+        dados = analisar_nota_uf(
+            estado=filtros.estado,
+            area=filtros.area,
+            nota_usuario=filtros.nota_usuario,
+        )
+    except UFsemDadosErrorNotaUF as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DadosIndisponiveisErrorNotaUF as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return RespostaNotaUF(
+        status="success",
+        mensagem="Análise estatística calculada com os dados de referência do ENEM 2025.",
+        dados=dados,
+    )
