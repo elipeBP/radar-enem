@@ -28,6 +28,47 @@ Dicionário de Dados oficial do INEP (`DICIONÁRIO/Dicionário_Microdados_Enem_2
 | `NU_NOTA_CN` | float | Nota da prova de Ciências da Natureza |
 | `SG_UF_PROVA` | string | Sigla da UF onde a prova foi realizada (também presente aqui) |
 
+## AV4 — Tipo de escola (`TP_DEPENDENCIA_ADM_ESC`) — confirmado no dicionário 2025
+
+> Seção complementar da issue [#51 — Filtro 4: Tipo de Escola](https://github.com/elipeBP/radar-enem/issues/51).
+> Não altera o conteúdo da Trilha de Gênero acima; apenas acrescenta o mapeamento usado pelo Filtro 4.
+
+A issue #51 calcula a composição pública × privada por UF. Após conferência do
+dicionário oficial de 2025, a variável usada é **`TP_DEPENDENCIA_ADM_ESC`**
+(dependência administrativa da escola de conclusão), da base de **RESULTADOS** —
+e **não** `TP_ESCOLA` (que **não existe** em 2025) nem `Q023` (trajetória escolar
+autodeclarada, não binária e em arquivo separado da nota). A codificação em
+`core/escola.py` (`CATEGORIAS_DEPENDENCIA`/`GRUPOS_VALIDOS`) segue o dicionário 2025:
+
+| Código | Descrição oficial 2025 | Uso no Filtro 4 |
+|---|---|---|
+| 1 | Federal | Pública (categoria válida) |
+| 2 | Estadual | Pública (categoria válida) |
+| 3 | Municipal | Pública (categoria válida) |
+| 4 | Privada | Privada (categoria válida) |
+| vazio/nulo | Escola não identificada no Censo | sem informação (excluído, medido como cobertura) |
+| outro | não previsto | excluído e listado pelo código |
+
+Fonte: `Dicionario/Dicionário_Microdados_Enem_2025.xlsx`, aba `RESULTADOS_2025`
+(`TP_DEPENDENCIA_ADM_ESC` = "Dependência administrativa (Escola)").
+
+**Checklist de confirmação:**
+
+- [x] Variável e códigos conferidos no dicionário oficial 2025 (aba `RESULTADOS_2025`)
+- [x] Categorias oficiais 2025 transcritas aqui (código → descrição)
+- [x] `MAPEAMENTO_CONFIRMADO = True` em `core/escola.py` (`CATEGORIAS_DEPENDENCIA`)
+- [ ] `python etl/validar_tp_escola.py --linhas 0` sobre `RESULTADOS_2025.csv` real, sem códigos não previstos
+- [ ] `resultados_2025.parquet` regerado e validado com `python etl/validar_tp_escola.py --parquet`
+
+Os dois últimos itens dependem dos microdados CSV reais, que não acompanham o repositório.
+
+**Restrição de arquitetura mantida:** a composição por `TP_DEPENDENCIA_ADM_ESC` é
+calculada sobre o arquivo de resultados, por UF, **sem junção** individual com
+participantes — o próprio dicionário do INEP 2025 indica que `NU_SEQUENCIAL` e
+`NU_INSCRICAO` não permitem relacionar as duas bases. As notas (`NU_NOTA_MT`) e a
+dependência ficam na mesma linha de resultados, mas são tratadas como estatísticas
+separadas (ver `Backend/docs/filtro_tipo_escola_av4.md`).
+
 ## ⚠️ BLOQUEIO CRÍTICO — sem chave de junção entre as bases
 
 O próprio Dicionário de Dados oficial do INEP declara, em nota de rodapé

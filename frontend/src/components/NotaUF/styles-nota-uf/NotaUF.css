@@ -1,0 +1,222 @@
+
+.nota-uf {
+  width: 100%;
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-card, 12px);
+  background: var(--color-surface, #fff);
+  color: var(--color-text-primary, #0f172a);
+}
+
+.nota-uf__cabecalho {
+  margin-bottom: 24px;
+}
+
+.nota-uf__identificador {
+  margin: 0 0 8px;
+  color: var(--color-primary, #2563eb);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.nota-uf__titulo {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.3;
+}
+
+.nota-uf__descricao {
+  max-width: 720px;
+  margin: 10px 0 0;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.nota-uf__formulario {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 24px;
+}
+
+.nota-uf__campo {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nota-uf__campo label {
+  color: var(--color-text-primary, #0f172a);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.nota-uf__campo select,
+.nota-uf__campo input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border, #cbd5e1);
+  border-radius: var(--radius-input, 8px);
+  background: var(--color-surface, #fff);
+  color: var(--color-text-primary, #0f172a);
+}
+
+.nota-uf__campo select:focus,
+.nota-uf__campo input:focus {
+  outline: 2px solid var(--color-primary, #2563eb);
+  outline-offset: 2px;
+}
+
+.nota-uf__botao {
+  min-height: 44px;
+  padding: 11px 18px;
+  border: 0;
+  border-radius: var(--radius-input, 8px);
+  background: var(--color-primary, #2563eb);
+  color: #fff;
+  font-weight: 650;
+  transition: background 0.2s ease;
+}
+
+.nota-uf__botao:hover:not(:disabled) {
+  background: var(--color-primary-hover, #1d4ed8);
+}
+
+.nota-uf__botao:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.nota-uf__mensagem {
+  margin: 16px 0;
+  padding: 14px 16px;
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+.nota-uf__mensagem p {
+  margin: 5px 0 0;
+}
+
+.nota-uf__mensagem--erro {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.nota-uf__carregando {
+  color: var(--color-text-secondary, #64748b);
+}
+
+.nota-uf__resultados {
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid var(--color-border, #e2e8f0);
+}
+
+.nota-uf__resultados-cabecalho {
+  margin-bottom: 16px;
+}
+
+.nota-uf__resultados-cabecalho h3 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.nota-uf__resultados-cabecalho p {
+  margin: 7px 0 0;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 0.875rem;
+}
+
+.nota-uf__cartoes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+.nota-uf__cartao {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 10px;
+  background: var(--color-surface-secondary, #f8fafc);
+}
+
+.nota-uf__rotulo {
+  display: block;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.nota-uf__valor {
+  display: block;
+  margin-top: 10px;
+  overflow-wrap: anywhere;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.2;
+}
+
+.nota-uf__cartao p {
+  margin: 10px 0 0;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 0.825rem;
+  line-height: 1.5;
+}
+
+.nota-uf__detalhes {
+  margin-top: 18px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.nota-uf__detalhes p {
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+
+.nota-uf__metodologia {
+  color: var(--color-text-secondary, #64748b);
+  font-size: 0.8rem;
+}
+
+@media (min-width: 640px) {
+  .nota-uf__formulario {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .nota-uf__botao {
+    grid-column: 1 / -1;
+  }
+
+  .nota-uf__cartoes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1000px) {
+  .nota-uf__formulario {
+    grid-template-columns: 0.7fr 1.4fr 0.9fr auto;
+  }
+
+  .nota-uf__botao {
+    grid-column: auto;
+  }
+
+  .nota-uf__cartoes {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .nota-uf {
+    padding: 17px;
+  }
+}

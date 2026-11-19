@@ -7,3 +7,7 @@
 venv/
 .env
 __pycache__/
+
+# Build do frontend copiado pelo Dockerfile pra ser servido estaticamente
+# pela API (container único) -- artefato gerado, nunca editado à mão.
+Backend/api/static/
