@@ -1,5 +1,7 @@
-
-const API_URL = 'http://localhost:8000';
+// Em produção (container único), o frontend é servido pela própria API --
+// caminho relativo funciona direto. Em dev (`npm run dev`), o proxy do Vite
+// (vite.config.js) encaminha '/api/*' para http://localhost:8000.
+const API_URL = import.meta.env.VITE_API_URL ?? '';
 
 // false = backend espera "estado"
 // true = backend espera "estados"

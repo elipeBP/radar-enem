@@ -2,10 +2,12 @@
 main.py
 -------
 Ponto de entrada da API. Aqui só vive a inicialização do FastAPI,
-o CORS, o carregamento dos dados (#36) e as rotas -- a validação de
-dados fica em schemas.py, a leitura dos Parquets fica em core/dados.py.
+o CORS, o carregamento dos dados (#36), as rotas e o serviço do build
+estático do frontend (Docker, container único) -- a validação de dados
+fica em schemas.py, a leitura dos Parquets fica em core/dados.py.
 """
 
+import os
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -20,6 +22,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from core.analise_areas import analisar_areas
 
@@ -256,3 +260,57 @@ def analise_nota_uf(filtros: FiltroNotaUF):
         mensagem="Análise estatística calculada com os dados de referência do ENEM 2025.",
         dados=dados,
     )
+
+
+class SPAStaticFiles(StaticFiles):
+    """StaticFiles com fallback de SPA.
+
+    O `html=True` do Starlette só serve 'index.html' pra raiz ou caminhos
+    de diretório -- um caminho inexistente como '/areas' (rota do React
+    Router) continua dando 404 de verdade, porque não existe esse arquivo.
+    Sem esse fallback, dar F5 em qualquer página que não seja "/" quebra
+    em produção.
+
+    `StaticFiles.get_response` levanta HTTPException(404) em vez de
+    devolver uma Response com status 404 -- confirmado lendo o código-fonte
+    do Starlette instalado. É a `starlette.exceptions.HTTPException`, não a
+    `fastapi.HTTPException` (subclasse dela): testado manualmente que
+    capturar a classe do FastAPI aqui NÃO funciona -- uma instância da
+    classe-mãe não é instância da subclasse, então o except nunca pega e
+    '/areas' continua 404. Por isso o import separado acima.
+
+    O fallback só vale para caminhos que NÃO começam com "/api/": esse mount
+    é um catch-all, então qualquer chamada a uma rota de API inexistente
+    (ex: typo do cliente) também cai aqui -- sem essa checagem, um erro de
+    integração vira silenciosamente um 200 com o index.html em vez de um
+    404 de verdade (testado manualmente: sem a checagem, '/api/rota-que-
+    -nao-existe' respondia 200 com HTML).
+
+    A checagem usa `scope["path"]` (a URL original, sempre com "/", pelo
+    padrão ASGI) e não o `path` recebido aqui: esse `path` já vem normalizado
+    por `os.path.join`/`os.path.normpath` com o separador do SO -- no
+    Windows vira "api\\rota", nunca bate com "api/" e o guard não funciona
+    (testado manualmente). Em produção (container Linux) isso coincidiria
+    por acaso, mas não dá pra depender disso.
+    """
+
+    async def get_response(self, path: str, scope):
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            eh_rota_de_api = scope.get("path", "").startswith("/api/")
+            if exc.status_code == 404 and not eh_rota_de_api:
+                return await super().get_response("index.html", scope)
+            raise
+
+
+# ---------------------------------------------------------------------------
+# Frontend estático: se a pasta 'static' existir (gerada pelo build do
+# Docker, ver Dockerfile), serve os arquivos compilados do React na raiz.
+# Precisa vir DEPOIS de todas as rotas /api/*: a ordem de registro decide a
+# prioridade de match, e o mount("/") é um catch-all -- se viesse antes,
+# engoliria as rotas da API.
+# ---------------------------------------------------------------------------
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/", SPAStaticFiles(directory=static_dir, html=True), name="static")
