@@ -1,10 +1,6 @@
 
 const API_URL = 'http://localhost:8000';
 
-// false = backend espera "estado"
-// true = backend espera "estados"
-const BACKEND_SUPORTA_LISTA_ESTADOS = false;
-
 function criarErroApi(mensagem, status = null) {
   const erro = new Error(mensagem);
   erro.status = status;
@@ -38,17 +34,11 @@ export async function consultarGenero(filtros) {
       ? null
       : Number(filtros.notaMatematica);
 
-  const payload = BACKEND_SUPORTA_LISTA_ESTADOS
-    ? {
-        ano: Number(filtros.ano),
-        estados: filtros.estados,
-        nota_matematica: notaMatematica,
-      }
-    : {
-        ano: Number(filtros.ano),
-        estado: filtros.estados[0] ?? null,
-        nota_matematica: notaMatematica,
-      };
+  const payload = {
+    ano: Number(filtros.ano),
+    estados: filtros.estados,
+    nota_matematica: notaMatematica,
+  };
 
   let response;
 
