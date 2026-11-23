@@ -55,13 +55,14 @@ function FiltrosDashboard({
               value={ano}
               onChange={(event) => setAno(event.target.value)}
             >
-              {Array.from({ length: 10 }, (_, index) => 2025 - index).map(
-                (valor) => (
-                  <option key={valor} value={valor}>
-                    {valor}
-                  </option>
-                ),
-              )}
+              {/* Anos com microdados ingeridos (#17) -- ver core/genero.py
+                  ANOS_DISPONIVEIS. Listar só esses evita oferecer uma opção
+                  que a API sempre rejeitaria com erro. */}
+              {[2025, 2024].map((valor) => (
+                <option key={valor} value={valor}>
+                  {valor}
+                </option>
+              ))}
             </select>
           </div>
 

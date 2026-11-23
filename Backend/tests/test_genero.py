@@ -14,7 +14,7 @@ import pytest
 from pydantic import ValidationError
 
 from core.genero import (
-    ANO_DADOS,
+    ANO_PADRAO,
     AnoIndisponivelError,
     EstadosSemDadosError,
     analisar_genero,
@@ -49,7 +49,7 @@ def df_participantes():
     )
 
 
-def _rodar(df_res, df_part, *, estados, nota, ano=ANO_DADOS):
+def _rodar(df_res, df_part, *, estados, nota, ano=ANO_PADRAO):
     return analisar_genero(df_res, df_part, ano=ano, estados=estados, nota_usuario=nota)
 
 
@@ -143,7 +143,15 @@ def test_atalhos_de_compatibilidade_batem_com_o_bloco_nota(df_resultados, df_par
 
 def test_ano_sem_dados_levanta_erro(df_resultados, df_participantes):
     with pytest.raises(AnoIndisponivelError):
-        _rodar(df_resultados, df_participantes, estados=["SC"], nota=700.0, ano=2024)
+        _rodar(df_resultados, df_participantes, estados=["SC"], nota=700.0, ano=2023)
+
+
+def test_ano_2024_tambem_disponivel(df_resultados, df_participantes):
+    # #17: 2024 passou a ter microdados ingeridos, junto com 2025.
+    r = _rodar(df_resultados, df_participantes, estados=["SC"], nota=700.0, ano=2024)
+    assert r["ano_referencia"] == 2024
+    assert r["nota_por_uf"]["fonte"] == "RESULTADOS_2024"
+    assert r["composicao_demografica"]["fonte"] == "PARTICIPANTES_2024"
 
 
 def test_estado_sem_registros_levanta_erro(df_resultados, df_participantes):
