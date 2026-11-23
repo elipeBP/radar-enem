@@ -23,6 +23,20 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Cópia do código-fonte do Backend
 COPY Backend/ .
 
+# Download dos Parquets de produção (gerados pelo ETL, ver etl/ingestion.py).
+# Não são commitados no repositório (arquivo de dados, não código -- ver
+# .gitignore), então não vêm pela COPY acima: o build do Render clona o
+# repo do GitHub, que nunca os tem. Ficam hospedados como asset de uma
+# GitHub Release (https://github.com/elipeBP/radar-enem/releases/tag/
+# dados-producao-v1) e são baixados aqui, uma vez por build -- não a cada
+# vez que a instância acorda do soneca do free tier, o que gastaria banda
+# à toa. O caminho etl/producao/ é o default que core/dados.py,
+# core/escola.py e core/nota_uf.py já esperam, sem precisar configurar
+# nenhuma variável de ambiente.
+RUN mkdir -p etl/producao && \
+    python -c "import urllib.request; urllib.request.urlretrieve('https://github.com/elipeBP/radar-enem/releases/download/dados-producao-v1/resultados_2025.parquet', 'etl/producao/resultados_2025.parquet')" && \
+    python -c "import urllib.request; urllib.request.urlretrieve('https://github.com/elipeBP/radar-enem/releases/download/dados-producao-v1/participantes_2025.parquet', 'etl/producao/participantes_2025.parquet')"
+
 # Cópia do build de produção do frontend para servir estaticamente na API
 COPY --from=frontend-builder /app/frontend/dist ./api/static
 
