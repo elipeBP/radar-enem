@@ -2,14 +2,14 @@
 main.py
 -------
 Ponto de entrada da API. Aqui só vive a inicialização do FastAPI,
-o CORS, o carregamento dos dados (#36), as rotas e o serviço do build
-estático do frontend (Docker, container único) -- a validação de dados
-fica em schemas.py, a leitura dos Parquets fica em core/dados.py.
+o CORS, as rotas e o serviço do build estático do frontend (Docker,
+container único) -- a validação de dados fica em schemas.py, a leitura
+dos Parquets fica em core/dados.py (sob demanda, sem pré-carregar nada
+no startup -- ver #17).
 """
 
 import os
 import sys
-from contextlib import asynccontextmanager
 from pathlib import Path
 
 # Garante que a pasta Backend/ (pai de api/) está no caminho de busca do
@@ -21,7 +21,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fastapi import FastAPI, HTTPException
-from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -89,43 +88,13 @@ except ImportError:  # pragma: no cover
         UFsemDadosError as UFsemDadosErrorNotaUF,
     )
 
-from core.dados import (
-    DadosNaoCarregadosError,
-    carregar_participantes,
-    carregar_resultados,
-    obter_dados_do_ano,
-)
-from core.genero import ANO_PADRAO, AnoIndisponivelError, EstadosSemDadosError, analisar_genero
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """
-    Roda uma vez quando a API sobe (não a cada requisição).
-
-    Carrega os dois Parquets de produção (#34) e guarda em `app.state`,
-    que é um espaço de memória compartilhado por toda a aplicação
-    enquanto o processo estiver no ar -- assim nenhuma rota precisa
-    reler o arquivo do disco a cada chamada.
-    """
-    app.state.df_resultados = carregar_resultados()
-    app.state.df_participantes = carregar_participantes()
-    print(
-        f"[startup] resultados_{ANO_PADRAO}.parquet: {app.state.df_resultados.height:,} linhas | "
-        f"participantes_{ANO_PADRAO}.parquet: {app.state.df_participantes.height:,} linhas"
-    )
-
-    yield  # a API fica no ar aqui, respondendo requisições
-
-    # Nada a limpar no shutdown: os DataFrames são liberados da memória
-    # automaticamente quando o processo da API termina.
-
+from core.dados import DadosIndisponiveisError, carregar_dados_genero
+from core.genero import AnoIndisponivelError, EstadosSemDadosError, analisar_genero
 
 app = FastAPI(
     title="Radar ENEM API",
     description="Backend do projeto Radar ENEM - UniSENAI Florianópolis",
     version="0.1.0",
-    lifespan=lifespan,
 )
 
 # ---------------------------------------------------------------------------
@@ -157,7 +126,7 @@ def health_check():
 
 
 @app.post("/api/dados/genero", response_model=RespostaGenero)
-def analise_genero(filtros: FiltroGenero, request: Request):
+def analise_genero(filtros: FiltroGenero):
     """
     Rota do módulo "Trilha de Gênero nas Exatas" (#37).
 
@@ -166,18 +135,19 @@ def analise_genero(filtros: FiltroGenero, request: Request):
     inscritos, fonte PARTICIPANTES_<ano>). A regra de negócio fica em
     core/genero.py; aqui só recebemos, chamamos e traduzimos erros em HTTP.
 
-    O ano padrão vem de app.state, preenchido uma vez no startup (#36);
-    outros anos suportados são carregados sob demanda (#17, ver
-    core/dados.py:obter_dados_do_ano) -- nunca os dois ao mesmo tempo de
-    forma permanente, pra caber na RAM do free tier do Render.
+    Leitura sob demanda, filtrada por UF já no Parquet (#17, ver
+    core/dados.py:carregar_dados_genero) -- nunca o arquivo inteiro em
+    memória. Um app.state pré-carregado no startup chegou a estourar os
+    512MB de RAM do free tier do Render (ver histórico do #17); essa
+    abordagem evita isso pra qualquer ano, sem precisar de cache.
     """
     try:
-        df_resultados, df_participantes = obter_dados_do_ano(
-            request.app.state, filtros.ano
+        df_resultados, df_participantes = carregar_dados_genero(
+            filtros.ano, filtros.estados
         )
     except AnoIndisponivelError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
-    except DadosNaoCarregadosError as exc:
+    except DadosIndisponiveisError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
 
     try:
