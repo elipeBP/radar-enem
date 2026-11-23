@@ -5,10 +5,10 @@ Regra de negócio do módulo "Trilha de Gênero nas Exatas" (#37).
 
 A análise devolve DUAS informações independentes, de fontes diferentes:
 
-  1. nota x UF (fonte: RESULTADOS_2025): onde a nota de Matemática do
+  1. nota x UF (fonte: RESULTADOS_<ano>): onde a nota de Matemática do
      usuário se posiciona (percentil / Z-Score) entre os participantes
      das UFs escolhidas.
-  2. composição demográfica (fonte: PARTICIPANTES_2025): % de mulheres
+  2. composição demográfica (fonte: PARTICIPANTES_<ano>): % de mulheres
      entre os inscritos nas UFs escolhidas.
 
 Elas NÃO são cruzadas: o INEP não publica chave de ligação entre os dois
@@ -24,22 +24,26 @@ import polars as pl
 
 from core.estatistica import calcular_percentil, calcular_zscore
 
-# Os microdados carregados são de uma única edição. Se o time passar a
-# servir outra, é só mudar aqui.
-ANO_DADOS = 2025
+# Anos com microdados ingeridos e disponíveis para consulta (#17). Cada ano
+# novo exige rodar o ETL (etl/ingestion.py) pra gerar o par de Parquets
+# correspondente -- ver docs/dicionario_dados.md.
+ANOS_DISPONIVEIS = frozenset({2024, 2025})
+ANO_PADRAO = 2025
 
 COL_UF = "SG_UF_PROVA"
 COL_NOTA = "NU_NOTA_MT"
 COL_SEXO = "TP_SEXO"
 
-AVISO_FONTES = (
-    "Os dois blocos vêm de arquivos diferentes do INEP e não são cruzados: "
-    "'nota_por_uf' usa RESULTADOS_2025 e 'composicao_demografica' usa "
-    "PARTICIPANTES_2025. Os microdados públicos não permitem ligar o sexo de "
-    "um participante à sua nota (LGPD), então isto não é uma comparação de "
-    "desempenho entre homens e mulheres. O estado considerado é a UF onde a "
-    "prova foi realizada."
-)
+
+def _aviso_fontes(ano: int) -> str:
+    return (
+        f"Os dois blocos vêm de arquivos diferentes do INEP e não são cruzados: "
+        f"'nota_por_uf' usa RESULTADOS_{ano} e 'composicao_demografica' usa "
+        f"PARTICIPANTES_{ano}. Os microdados públicos não permitem ligar o sexo "
+        f"de um participante à sua nota (LGPD), então isto não é uma comparação "
+        f"de desempenho entre homens e mulheres. O estado considerado é a UF "
+        f"onde a prova foi realizada."
+    )
 
 
 class AnoIndisponivelError(ValueError):
@@ -65,12 +69,13 @@ def analisar_genero(
     grupo), não uma média de médias.
 
     Levanta:
-      - AnoIndisponivelError: `ano` diferente de ANO_DADOS.
+      - AnoIndisponivelError: `ano` fora de ANOS_DISPONIVEIS.
       - EstadosSemDadosError: nenhuma nota ou nenhum inscrito nas UFs.
     """
-    if ano != ANO_DADOS:
+    if ano not in ANOS_DISPONIVEIS:
+        anos_lista = ", ".join(str(a) for a in sorted(ANOS_DISPONIVEIS))
         raise AnoIndisponivelError(
-            f"Só há microdados de {ANO_DADOS} carregados (pedido: {ano})."
+            f"Só há microdados de {anos_lista} carregados (pedido: {ano})."
         )
 
     # --- Bloco 1: nota x UF (RESULTADOS) ----------------------------------
@@ -94,7 +99,7 @@ def analisar_genero(
         raise EstadosSemDadosError(str(exc)) from exc
 
     nota_por_uf = {
-        "fonte": "RESULTADOS_2025",
+        "fonte": f"RESULTADOS_{ano}",
         "nota_usuario": nota_usuario,
         "percentil_usuario": round(percentil, 2),
         "zscore_usuario": round(zscore, 3),
@@ -120,7 +125,7 @@ def analisar_genero(
     homens = total_inscritos - mulheres
 
     composicao = {
-        "fonte": "PARTICIPANTES_2025",
+        "fonte": f"PARTICIPANTES_{ano}",
         "total_inscritos": total_inscritos,
         "inscritas_mulheres": mulheres,
         "inscritos_homens": homens,
@@ -138,5 +143,5 @@ def analisar_genero(
         "media_grupo_filtrado": nota_por_uf["media_grupo_filtrado"],
         "nota_por_uf": nota_por_uf,
         "composicao_demografica": composicao,
-        "aviso": AVISO_FONTES,
+        "aviso": _aviso_fontes(ano),
     }

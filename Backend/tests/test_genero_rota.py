@@ -104,9 +104,31 @@ def test_rota_rejeita_nota_fora_do_intervalo(client):
 
 
 def test_rota_explica_quando_o_ano_nao_tem_dados(client):
-    resp = _post(client, ano=2024)
+    resp = _post(client, ano=2023)
     assert resp.status_code == 422
     assert "2025" in resp.json()["detail"]
+
+
+def test_rota_carrega_ano_extra_sob_demanda(client, tmp_path, monkeypatch):
+    # #17: 2024 não vem pré-carregado no startup (só o ano padrão, 2025) --
+    # é lido sob demanda na primeira requisição. Redireciona a "pasta de
+    # produção" pra um Parquet de 2024 pequeno, só pra este teste.
+    pl.DataFrame(
+        {"SG_UF_PROVA": ["SC"] * 2, "NU_NOTA_MT": [300.0, 900.0]}
+    ).write_parquet(tmp_path / "resultados_2024.parquet")
+    pl.DataFrame(
+        {"SG_UF_PROVA": ["SC"] * 2, "TP_SEXO": ["F", "M"]}
+    ).write_parquet(tmp_path / "participantes_2024.parquet")
+
+    import core.dados as dados_module
+
+    monkeypatch.setattr(dados_module, "PASTA_PRODUCAO", tmp_path)
+
+    resp = _post(client, ano=2024)
+    assert resp.status_code == 200
+    dados = resp.json()["dados"]
+    assert dados["ano_referencia"] == 2024
+    assert dados["nota_por_uf"]["fonte"] == "RESULTADOS_2024"
 
 
 def test_rota_devolve_404_para_estado_sem_registros(client):

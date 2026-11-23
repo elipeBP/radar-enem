@@ -89,8 +89,13 @@ except ImportError:  # pragma: no cover
         UFsemDadosError as UFsemDadosErrorNotaUF,
     )
 
-from core.dados import carregar_participantes, carregar_resultados
-from core.genero import AnoIndisponivelError, EstadosSemDadosError, analisar_genero
+from core.dados import (
+    DadosNaoCarregadosError,
+    carregar_participantes,
+    carregar_resultados,
+    obter_dados_do_ano,
+)
+from core.genero import ANO_PADRAO, AnoIndisponivelError, EstadosSemDadosError, analisar_genero
 
 
 @asynccontextmanager
@@ -106,8 +111,8 @@ async def lifespan(app: FastAPI):
     app.state.df_resultados = carregar_resultados()
     app.state.df_participantes = carregar_participantes()
     print(
-        f"[startup] resultados_2025.parquet: {app.state.df_resultados.height:,} linhas | "
-        f"participantes_2025.parquet: {app.state.df_participantes.height:,} linhas"
+        f"[startup] resultados_{ANO_PADRAO}.parquet: {app.state.df_resultados.height:,} linhas | "
+        f"participantes_{ANO_PADRAO}.parquet: {app.state.df_participantes.height:,} linhas"
     )
 
     yield  # a API fica no ar aqui, respondendo requisições
@@ -157,16 +162,23 @@ def analise_genero(filtros: FiltroGenero, request: Request):
     Rota do módulo "Trilha de Gênero nas Exatas" (#37).
 
     Devolve dois blocos independentes: nota x UF (percentil/Z-Score reais,
-    fonte RESULTADOS_2025) e composição demográfica (% de mulheres entre os
-    inscritos, fonte PARTICIPANTES_2025). A regra de negócio fica em
+    fonte RESULTADOS_<ano>) e composição demográfica (% de mulheres entre os
+    inscritos, fonte PARTICIPANTES_<ano>). A regra de negócio fica em
     core/genero.py; aqui só recebemos, chamamos e traduzimos erros em HTTP.
 
-    Os DataFrames vêm de app.state, preenchido uma vez no startup (#36).
+    O ano padrão vem de app.state, preenchido uma vez no startup (#36);
+    outros anos suportados são carregados sob demanda (#17, ver
+    core/dados.py:obter_dados_do_ano) -- nunca os dois ao mesmo tempo de
+    forma permanente, pra caber na RAM do free tier do Render.
     """
-    df_resultados = getattr(request.app.state, "df_resultados", None)
-    df_participantes = getattr(request.app.state, "df_participantes", None)
-    if df_resultados is None or df_participantes is None:
-        raise HTTPException(status_code=503, detail="Dados ainda não carregados.")
+    try:
+        df_resultados, df_participantes = obter_dados_do_ano(
+            request.app.state, filtros.ano
+        )
+    except AnoIndisponivelError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except DadosNaoCarregadosError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
 
     try:
         dados = analisar_genero(
@@ -183,7 +195,7 @@ def analise_genero(filtros: FiltroGenero, request: Request):
 
     return RespostaGenero(
         status="success",
-        mensagem="Análise calculada a partir dos microdados reais do ENEM 2025.",
+        mensagem=f"Análise calculada a partir dos microdados reais do ENEM {filtros.ano}.",
         dados=dados,
     )
 
