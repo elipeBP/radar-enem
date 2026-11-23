@@ -1,37 +1,47 @@
 """
 etl/ingestion.py
 -----------------
-Versao de PRODUCAO da ingestao dos microdados do ENEM (ticket #34).
+Versao de PRODUCAO da ingestao dos microdados do ENEM (ticket #34, #17).
 
-Gera dois arquivos Parquet (nao um so), porque RESULTADOS_2025.csv e
-PARTICIPANTES_2025.csv tem granularidades diferentes e NAO sao juntaveis
+Gera dois arquivos Parquet (nao um so), porque RESULTADOS_<ano>.csv e
+PARTICIPANTES_<ano>.csv tem granularidades diferentes e NAO sao juntaveis
 (confirmado oficialmente no #33/#42 -- ausencia de chave de ligacao por
 decisao de LGPD). Confirmado com o Felipe (27/09): misturar os dois num
 arquivo só seria enganoso, sem chave de junção. Entregáveis separados:
 
-  - resultados_2025.parquet    -> Camada 1: nota x UF (percentil real)
-  - participantes_2025.parquet -> Camada 2: composicao demografica (sem nota)
+  - resultados_<ano>.parquet    -> Camada 1: nota x UF (percentil real)
+  - participantes_<ano>.parquet -> Camada 2: composicao demografica (sem nota)
 
 As 5 notas (CN, CH, LC, MT, Redação) entram no Parquet de resultados,
 não só Matemática -- confirmado pelo Felipe: a Camada 1 é compartilhada
 por todos os módulos futuros, não só a Trilha de Gênero.
+
+Suporte a múltiplos anos (#17): edite ANO abaixo e rode de novo pra gerar
+o par de Parquets de outro ano -- a Trilha de Gênero (core/genero.py,
+ANOS_DISPONIVEIS) é o único módulo que consulta mais de um ano hoje.
 """
 
 from pathlib import Path
 
 import polars as pl
 
+# --- Ano processado por esta execução ------------------------------------
+# Edite aqui pra gerar outro ano (ex: 2024) e rode de novo -- cada execução
+# gera só o par de Parquets deste ano, sem apagar os de outros anos já
+# gerados em PASTA_SAIDA.
+ANO = 2025
+
 # --- Caminhos -----------------------------------------------------------
 
 PASTA_ETL = Path(__file__).parent
-PASTA_DADOS_BRUTOS = PASTA_ETL / "microdados_enem_2025" / "microdados_enem_2025" / "DADOS"
+PASTA_DADOS_BRUTOS = PASTA_ETL / f"microdados_enem_{ANO}" / f"microdados_enem_{ANO}" / "DADOS"
 PASTA_SAIDA = PASTA_ETL / "producao"
 
-CAMINHO_RESULTADOS_CSV = PASTA_DADOS_BRUTOS / "RESULTADOS_2025.csv"
-CAMINHO_PARTICIPANTES_CSV = PASTA_DADOS_BRUTOS / "PARTICIPANTES_2025.csv"
+CAMINHO_RESULTADOS_CSV = PASTA_DADOS_BRUTOS / f"RESULTADOS_{ANO}.csv"
+CAMINHO_PARTICIPANTES_CSV = PASTA_DADOS_BRUTOS / f"PARTICIPANTES_{ANO}.csv"
 
-CAMINHO_RESULTADOS_PARQUET = PASTA_SAIDA / "resultados_2025.parquet"
-CAMINHO_PARTICIPANTES_PARQUET = PASTA_SAIDA / "participantes_2025.parquet"
+CAMINHO_RESULTADOS_PARQUET = PASTA_SAIDA / f"resultados_{ANO}.parquet"
+CAMINHO_PARTICIPANTES_PARQUET = PASTA_SAIDA / f"participantes_{ANO}.parquet"
 
 # --- Colunas selecionadas -------------------------------------------------
 # Reduzir as colunas JA na leitura do CSV (via `columns=`) economiza
@@ -159,7 +169,10 @@ def main():
 
     print("\nConcluido. Os dois arquivos estao em:", PASTA_SAIDA)
     print("Lembrete: NAO commitar esses .parquet (ja cobertos pelo .gitignore).")
-    print("Proximo passo: entregar os dois arquivos ao Felipe para upload no Azure Blob Storage.")
+    print(
+        "Proximo passo: entregar os dois arquivos ao Felipe para upload como "
+        "asset de uma GitHub Release (ver Dockerfile e #17)."
+    )
 
 
 if __name__ == "__main__":
