@@ -2,8 +2,10 @@
 tests/test_genero_rota.py
 --------------------------
 Testes da rota POST /api/dados/genero (#37), de ponta a ponta: a API sobe
-de verdade (com o lifespan do #36), mas lendo Parquets pequenos criados em
-pasta temporária -- nunca os arquivos reais de 4,8 milhões de linhas.
+de verdade, mas lendo Parquets pequenos criados em pasta temporária --
+nunca os arquivos reais de 4,8 milhões de linhas. Leitura é sob demanda
+por requisição (#17, core/dados.py:carregar_dados_genero), sem nada
+pré-carregado no startup.
 
 Rodar com:  pytest tests/test_genero_rota.py -v
 """
@@ -31,7 +33,7 @@ def client(tmp_path, monkeypatch):
         }
     ).write_parquet(tmp_path / "participantes_2025.parquet")
 
-    # O lifespan (#36) lê estes caminhos na hora em que a API sobe.
+    # carregar_dados_genero le estes caminhos a cada requisicao (nao so no startup).
     monkeypatch.setenv("RESULTADOS_PARQUET_PATH", str(tmp_path / "resultados_2025.parquet"))
     monkeypatch.setenv("PARTICIPANTES_PARQUET_PATH", str(tmp_path / "participantes_2025.parquet"))
 
@@ -109,10 +111,10 @@ def test_rota_explica_quando_o_ano_nao_tem_dados(client):
     assert "2025" in resp.json()["detail"]
 
 
-def test_rota_carrega_ano_extra_sob_demanda(client, tmp_path, monkeypatch):
-    # #17: 2024 não vem pré-carregado no startup (só o ano padrão, 2025) --
-    # é lido sob demanda na primeira requisição. Redireciona a "pasta de
-    # produção" pra um Parquet de 2024 pequeno, só pra este teste.
+def test_rota_le_outro_ano_suportado(client, tmp_path, monkeypatch):
+    # #17: 2024 nao usa variavel de ambiente (so o ano com override, 2025) --
+    # le do caminho padrao. Redireciona a "pasta de producao" pra um
+    # Parquet de 2024 pequeno, so pra este teste.
     pl.DataFrame(
         {"SG_UF_PROVA": ["SC"] * 2, "NU_NOTA_MT": [300.0, 900.0]}
     ).write_parquet(tmp_path / "resultados_2024.parquet")
@@ -137,17 +139,17 @@ def test_rota_devolve_404_para_estado_sem_registros(client):
     assert resp.status_code == 404
 
 
-def test_rota_devolve_503_se_os_dados_nao_foram_carregados():
+def test_rota_devolve_503_quando_parquet_ausente(tmp_path, monkeypatch):
+    import core.dados as dados_module
     from api.main import app
 
-    # remove o que testes anteriores possam ter deixado em app.state e usa o
-    # cliente SEM 'with', o que não dispara o lifespan
-    for nome in ("df_resultados", "df_participantes"):
-        if hasattr(app.state, nome):
-            delattr(app.state, nome)
+    monkeypatch.setattr(dados_module, "PASTA_PRODUCAO", tmp_path)  # pasta vazia
+    monkeypatch.delenv("RESULTADOS_PARQUET_PATH", raising=False)
+    monkeypatch.delenv("PARTICIPANTES_PARQUET_PATH", raising=False)
 
     resp = TestClient(app).post(
         "/api/dados/genero",
         json={"ano": 2025, "estados": ["SC"], "nota_matematica": 700},
     )
     assert resp.status_code == 503
+    assert "não foi encontrado" in resp.json()["detail"]
