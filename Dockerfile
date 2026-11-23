@@ -33,9 +33,20 @@ COPY Backend/ .
 # à toa. O caminho etl/producao/ é o default que core/dados.py,
 # core/escola.py e core/nota_uf.py já esperam, sem precisar configurar
 # nenhuma variável de ambiente.
+#
+# 2024 (#17): a Trilha de Gênero passou a suportar os dois anos
+# (core/genero.py ANOS_DISPONIVEIS). Os Parquets de 2024 também baixam
+# aqui, mas NÃO ficam residentes em memória o tempo todo -- só o ano
+# padrão (2025) é pré-carregado no startup; 2024 é lido do disco sob
+# demanda e fica em cache até outro ano ser pedido (core/dados.py
+# obter_dados_do_ano). Isso evita estourar os 512MB de RAM do free tier
+# do Render com os dois anos residentes ao mesmo tempo (medido:
+# ~285MB/ano em memória).
 RUN mkdir -p etl/producao && \
     python -c "import urllib.request; urllib.request.urlretrieve('https://github.com/elipeBP/radar-enem/releases/download/dados-producao-v1/resultados_2025.parquet', 'etl/producao/resultados_2025.parquet')" && \
-    python -c "import urllib.request; urllib.request.urlretrieve('https://github.com/elipeBP/radar-enem/releases/download/dados-producao-v1/participantes_2025.parquet', 'etl/producao/participantes_2025.parquet')"
+    python -c "import urllib.request; urllib.request.urlretrieve('https://github.com/elipeBP/radar-enem/releases/download/dados-producao-v1/participantes_2025.parquet', 'etl/producao/participantes_2025.parquet')" && \
+    python -c "import urllib.request; urllib.request.urlretrieve('https://github.com/elipeBP/radar-enem/releases/download/dados-producao-v1/resultados_2024.parquet', 'etl/producao/resultados_2024.parquet')" && \
+    python -c "import urllib.request; urllib.request.urlretrieve('https://github.com/elipeBP/radar-enem/releases/download/dados-producao-v1/participantes_2024.parquet', 'etl/producao/participantes_2024.parquet')"
 
 # Cópia do build de produção do frontend para servir estaticamente na API
 COPY --from=frontend-builder /app/frontend/dist ./api/static
