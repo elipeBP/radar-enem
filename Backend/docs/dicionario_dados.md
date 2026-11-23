@@ -140,9 +140,46 @@ linhas), com seleção de colunas na leitura e compressão zstd na escrita.
 
 | Arquivo | Linhas | Colunas | Tamanho |
 |---|---|---|---|
-| `resultados_2025.parquet` | 4.810.772 | `SG_UF_PROVA`, `NU_NOTA_CN`, `NU_NOTA_CH`, `NU_NOTA_LC`, `NU_NOTA_MT`, `NU_NOTA_REDACAO` | 39,99 MB |
+| `resultados_2025.parquet` | 4.810.772 | `SG_UF_PROVA`, `NU_NOTA_CN`, `NU_NOTA_CH`, `NU_NOTA_LC`, `NU_NOTA_MT`, `NU_NOTA_REDACAO`, `TP_PRESENCA_MT`, `TP_DEPENDENCIA_ADM_ESC` | 41,49 MB |
 | `participantes_2025.parquet` | 4.810.772 | `TP_SEXO`, `SG_UF_PROVA` | 3,32 MB |
 
 Gerado por `Backend/etl/ingestion.py` (compressão zstd). Os arquivos não
-são commitados no repositório (cobertos pelo `.gitignore`) — a entrega ao
-Felipe, para upload no Azure Blob Storage, é feita por fora do Git.
+são commitados no repositório (cobertos pelo `.gitignore`) — a entrega é
+feita como asset de uma GitHub Release, baixada pelo `Dockerfile` no
+build (ver #17).
+
+## Ano 2024 (#17 — Trilha de Gênero com seletor de ano)
+
+A Trilha de Gênero é o único módulo com seletor de ano exposto no
+frontend (`core/genero.py`, `ANOS_DISPONIVEIS`). Antes do #17, qualquer
+ano diferente de 2025 dava erro — o dropdown oferecia 10 anos (2016 a
+2025) mas só 2025 tinha dado de verdade. Resolvido ingerindo também o
+ZIP oficial de 2024 do INEP
+(`https://download.inep.gov.br/microdados/microdados_enem_2024.zip`).
+
+**Schema conferido igual ao de 2025** (mesmas colunas, mesmos nomes, lido
+da amostra real do CSV de 2024 antes de rodar a ingestão completa — não
+presumido): `RESULTADOS_2024.csv` e `PARTICIPANTES_2024.csv` têm as
+mesmas colunas usadas pela Trilha de Gênero e seguem a mesma convenção
+`;`/`latin1`/sem chave de junção entre as duas bases (mesmo "BLOQUEIO
+CRÍTICO" documentado acima, válido pra qualquer ano).
+
+| Arquivo | Linhas | Colunas | Tamanho |
+|---|---|---|---|
+| `resultados_2024.parquet` | 4.332.944 | `TP_DEPENDENCIA_ADM_ESC`, `SG_UF_PROVA`, `TP_PRESENCA_MT`, `NU_NOTA_CN`, `NU_NOTA_CH`, `NU_NOTA_LC`, `NU_NOTA_MT`, `NU_NOTA_REDACAO` | 37,95 MB |
+| `participantes_2024.parquet` | 4.332.944 | `TP_SEXO`, `SG_UF_PROVA` | 3,00 MB |
+
+Validação rápida pós-ingestão: `TP_SEXO` só tem `F`/`M` (2.624.621 /
+1.708.323 — 60,6% mulheres, consistente com o padrão histórico do ENEM);
+`SG_UF_PROVA` tem as 27 UFs; `NU_NOTA_MT` fica dentro de [0, 1000]
+(min 0,0, max 961,9, média 526,97); SC bate entre os dois arquivos
+(95.126 registros nos dois).
+
+**Decisão de arquitetura (RAM, não só dado):** medido com os Parquets
+reais, um ano sozinho ocupa ~285MB em memória (Polars `estimated_size`).
+O free tier do Render tem 512MB de RAM total — carregar 2024 e 2025 ao
+mesmo tempo no startup estouraria isso. Por isso só o ano padrão (2025)
+é pré-carregado no startup; 2024 é lido sob demanda na primeira
+requisição e fica em cache até outro ano ser pedido (nunca os dois
+residentes ao mesmo tempo de forma permanente). Ver
+`core/dados.py:obter_dados_do_ano`.
