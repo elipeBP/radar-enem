@@ -62,13 +62,18 @@ COLUNAS_RESULTADOS = [
     "TP_DEPENDENCIA_ADM_ESC",
 ]
 
-# Escopo atual: so as colunas ja mapeadas oficialmente no #33/#42.
-# As colunas demograficas dos outros 3 modulos (Abismo Digital, Peso do
-# CEP, Equidade de Escolas) ainda nao tem dicionario proprio -- quando
-# tiverem, essa lista cresce.
+# Escopo atual: so as colunas ja mapeadas oficialmente no #33/#42/#52.
+# As colunas demograficas dos outros 2 modulos (Abismo Digital, Peso do
+# CEP) ainda nao tem dicionario proprio -- quando tiverem, essa lista cresce.
 COLUNAS_PARTICIPANTES = [
     "SG_UF_PROVA",
     "TP_SEXO",
+    # AV4 / Issue #52: faixa etaria do participante, 20 codigos oficiais
+    # (1="Menor de 17 anos" ... 20="Maior de 70 anos"). Mesma base de
+    # TP_SEXO (PARTICIPANTES), nao em RESULTADOS -- entra na Camada 2
+    # (composicao demografica, sem nota) do Filtro 5. Ver
+    # docs/dicionario_dados.md.
+    "TP_FAIXA_ETARIA",
 ]
 
 # Tipos forcados na leitura dos RESULTADOS (AV4 / Issue #51).
