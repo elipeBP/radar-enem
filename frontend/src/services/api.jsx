@@ -188,6 +188,59 @@ export async function consultarEscola(filtros) {
 }
 
 // ---------------------------------------------------------
+// FILTRO 5 — FAIXA ETÁRIA (issue #52)
+// ---------------------------------------------------------
+
+const MENSAGENS_IDADE = {
+  404: 'Não há dados suficientes para a UF selecionada na base de referência.',
+  422: 'Os dados enviados são inválidos. Confira a UF e a nota (0 a 1000).',
+  503: 'Os dados de referência do ENEM 2025 não estão disponíveis no servidor no momento.',
+};
+
+export async function consultarFaixaEtaria(filtros) {
+  let response;
+
+  try {
+    response = await fetch(`${API_URL}/api/dados/idade`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        estado: filtros.estado,
+        nota_matematica: filtros.nota_matematica,
+      }),
+    });
+  } catch {
+    throw criarErroApi(
+      'Não foi possível conectar à API. Verifique se o backend está online.',
+    );
+  }
+
+  if (!response.ok) {
+    let detalhe = null;
+    try {
+      detalhe = extrairDetalhe(await response.json());
+    } catch {
+      // Mantém a mensagem genérica se a API não devolver JSON legível.
+    }
+    const base =
+      MENSAGENS_IDADE[response.status] ||
+      `Não foi possível realizar a consulta. Erro ${response.status}.`;
+    throw criarErroApi(
+      detalhe ? `${base} Detalhe: ${detalhe}` : base,
+      response.status,
+    );
+  }
+
+  const corpo = await response.json();
+  if (!corpo?.dados?.desempenho || !corpo?.dados?.composicao_etaria) {
+    throw criarErroApi(
+      'A API respondeu em um formato inesperado para o filtro de faixa etária.',
+    );
+  }
+  return corpo;
+}
+
+// ---------------------------------------------------------
 // FILTRO 1 — NOTA × ESTADO (issue #48)
 // ---------------------------------------------------------
 

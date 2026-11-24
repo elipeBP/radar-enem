@@ -297,3 +297,58 @@ class RespostaNotaUF(BaseModel):
     status: Literal["success", "error"]
     mensagem: str
     dados: dict
+
+
+# ===========================================================================
+# Filtro 5 — Faixa Etária (issue #52)
+# ===========================================================================
+class FiltroIdade(BaseModel):
+    """Entrada da rota POST /api/dados/idade.
+
+    Mesmo contrato do Filtro 4 (FiltroEscola): UF única (não lista) +
+    nota de Matemática. ``extra="forbid"`` mantém o contrato enxuto.
+    """
+
+    estado: str = Field(
+        ...,
+        description="Sigla da UF, ex: 'SC', 'SP' (normalizada para maiúsculas).",
+    )
+    nota_matematica: float = Field(
+        ...,
+        strict=True,
+        ge=0,
+        le=1000,
+        description="Nota do usuário na prova de Matemática (0 a 1000).",
+    )
+
+    @field_validator("estado", mode="before")
+    @classmethod
+    def _normalizar_e_validar_uf(cls, valor: object) -> str:
+        if not isinstance(valor, str):
+            raise ValueError("A UF deve ser uma string de 2 letras (ex: 'SC').")
+        uf = valor.strip().upper()
+        if uf not in UFS_VALIDAS:
+            raise ValueError(
+                "Informe uma UF brasileira válida, por exemplo SC ou SP."
+            )
+        return uf
+
+    model_config = {
+        "extra": "forbid",
+        "json_schema_extra": {
+            "example": {"estado": "SC", "nota_matematica": 620.5}
+        },
+    }
+
+
+class RespostaIdade(BaseModel):
+    """Saída da rota POST /api/dados/idade.
+
+    ``dados`` carrega as duas análises independentes (desempenho e
+    composição por faixa etária), exatamente como montadas por
+    core.faixa_etaria.analisar_faixa_etaria.
+    """
+
+    status: Literal["success", "error"]
+    mensagem: str
+    dados: dict
