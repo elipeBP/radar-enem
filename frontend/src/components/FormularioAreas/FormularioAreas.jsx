@@ -1,21 +1,17 @@
-import { useState } from "react";
+import { useState } from 'react';
 
 export default function FormularioAreas({ onConsultar, carregando }) {
   const [notas, setNotas] = useState({
-    nota_cn: "",
-    nota_ch: "",
-    nota_lc: "",
-    nota_mt: "",
-    nota_redacao: "",
+    nota_cn: '',
+    nota_ch: '',
+    nota_lc: '',
+    nota_mt: '',
+    nota_redacao: '',
   });
 
   function handleChange(event) {
     const { name, value } = event.target;
-
-    setNotas((estadoAnterior) => ({
-      ...estadoAnterior,
-      [name]: value,
-    }));
+    setNotas((estadoAnterior) => ({ ...estadoAnterior, [name]: value }));
   }
 
   function handleSubmit(event) {
@@ -33,65 +29,22 @@ export default function FormularioAreas({ onConsultar, carregando }) {
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="bg-white rounded-xl shadow p-6 space-y-4"
-    >
-      <div>
-        <h2 className="text-xl font-semibold">
-          Nota × Área do Conhecimento
-        </h2>
-
-        <p className="text-sm text-gray-500 mt-1">
-          Informe suas notas do ENEM para comparar seu desempenho com a
-          distribuição nacional.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <CampoNota
-          label="Ciências da Natureza"
-          name="nota_cn"
-          value={notas.nota_cn}
-          onChange={handleChange}
-        />
-
-        <CampoNota
-          label="Ciências Humanas"
-          name="nota_ch"
-          value={notas.nota_ch}
-          onChange={handleChange}
-        />
-
-        <CampoNota
-          label="Linguagens"
-          name="nota_lc"
-          value={notas.nota_lc}
-          onChange={handleChange}
-        />
-
-        <CampoNota
-          label="Matemática"
-          name="nota_mt"
-          value={notas.nota_mt}
-          onChange={handleChange}
-        />
-
-        <CampoNota
-          label="Redação"
-          name="nota_redacao"
-          value={notas.nota_redacao}
-          onChange={handleChange}
-        />
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <CampoNota label="Ciências da Natureza" name="nota_cn" value={notas.nota_cn} onChange={handleChange} />
+        <CampoNota label="Ciências Humanas" name="nota_ch" value={notas.nota_ch} onChange={handleChange} />
+        <CampoNota label="Linguagens" name="nota_lc" value={notas.nota_lc} onChange={handleChange} />
+        <CampoNota label="Matemática" name="nota_mt" value={notas.nota_mt} onChange={handleChange} />
+        <CampoNota label="Redação" name="nota_redacao" value={notas.nota_redacao} onChange={handleChange} />
       </div>
 
       <button
         type="submit"
         disabled={carregando}
-        className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium
-                   hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white transition-colors
+          hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {carregando ? "Analisando..." : "Analisar desempenho"}
+        {carregando ? 'Analisando...' : 'Analisar desempenho'}
       </button>
     </form>
   );
@@ -100,11 +53,12 @@ export default function FormularioAreas({ onConsultar, carregando }) {
 function CampoNota({ label, name, value, onChange }) {
   return (
     <div>
-      <label className="block text-sm font-medium mb-1">
+      <label htmlFor={name} className="mb-1.5 block text-xs font-semibold text-slate-500 dark:text-slate-400">
         {label}
       </label>
 
       <input
+        id={name}
         type="number"
         name={name}
         value={value}
@@ -114,7 +68,9 @@ function CampoNota({ label, name, value, onChange }) {
         step="0.1"
         required
         placeholder="0 a 1000"
-        className="w-full border rounded-lg px-3 py-2"
+        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900
+          focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30
+          dark:border-slate-700 dark:bg-slate-800 dark:text-white"
       />
     </div>
   );

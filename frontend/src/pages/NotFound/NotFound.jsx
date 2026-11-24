@@ -1,22 +1,27 @@
 
 import { Link } from 'react-router-dom';
 
-import './styles-not-found/NotFound.css';
-
 function NotFound() {
   return (
-    <main className="not-found">
-      <div className="not-found__content">
-        <p className="not-found__code">404</p>
+    <main className="grid min-h-screen place-items-center px-6 py-16 md:min-h-full">
+      <div className="max-w-md text-center">
+        <p className="text-sm font-bold tracking-widest text-brand-600 dark:text-brand-400">
+          404
+        </p>
 
-        <h1 className="not-found__title">Página não encontrada</h1>
+        <h1 className="mt-3 text-3xl font-bold text-slate-900 dark:text-white">
+          Página não encontrada
+        </h1>
 
-        <p className="not-found__description">
+        <p className="mt-3 text-slate-600 dark:text-slate-400">
           A página que você tentou acessar não existe ou foi movida.
         </p>
 
-        <Link className="not-found__link" to="/">
-          Voltar ao dashboard
+        <Link
+          to="/"
+          className="mt-8 inline-flex items-center rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+        >
+          Voltar ao início
         </Link>
       </div>
     </main>
@@ -24,4 +29,3 @@ function NotFound() {
 }
 
 export default NotFound;
-

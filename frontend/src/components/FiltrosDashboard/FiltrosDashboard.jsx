@@ -1,14 +1,17 @@
 
 import MapaBrasil from '../MapaInterativo/MapaBrasil';
 
-import './styles-filtros-dashboard/FiltrosDashboard.css';
-
 const estadosBrasil = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF',
   'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA',
   'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS',
   'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
 ];
+
+const campoSelectClasses =
+  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-center text-sm font-semibold ' +
+  'text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 ' +
+  'dark:border-slate-700 dark:bg-slate-800 dark:text-white';
 
 function FiltrosDashboard({
   ano,
@@ -21,9 +24,7 @@ function FiltrosDashboard({
   loading,
 }) {
   function removerEstado(estado) {
-    setEstados((atuais) =>
-      atuais.filter((item) => item !== estado),
-    );
+    setEstados((atuais) => atuais.filter((item) => item !== estado));
   }
 
   const estadosResumo = [...estados].sort(
@@ -31,27 +32,27 @@ function FiltrosDashboard({
   );
 
   return (
-    <section className="filtros-dashboard">
+    <section className="space-y-6">
       <div
-        className="filtros-dashboard__summary"
         aria-label="Filtros da consulta"
+        className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
       >
-        <h2 className="filtros-dashboard__summary-title">
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
           Filtros selecionados
         </h2>
 
-        <div className="filtros-dashboard__summary-grid">
-          <div className="filtros-dashboard__summary-card">
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div>
             <label
-              className="filtros-dashboard__summary-label"
               htmlFor="filtro-ano"
+              className="mb-1.5 block text-xs font-semibold text-slate-500 dark:text-slate-400"
             >
               Ano
             </label>
 
             <select
               id="filtro-ano"
-              className="filtros-dashboard__summary-input filtros-dashboard__summary-input--center"
+              className={campoSelectClasses}
               value={ano}
               onChange={(event) => setAno(event.target.value)}
             >
@@ -66,27 +67,27 @@ function FiltrosDashboard({
             </select>
           </div>
 
-          <div className="filtros-dashboard__summary-card filtros-dashboard__summary-card--states">
-            <div className="filtros-dashboard__summary-state-header">
-              <span className="filtros-dashboard__summary-label">
+          <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                 Estados
               </span>
 
-              <span className="filtros-dashboard__count-badge">
+              <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:bg-brand-950 dark:text-brand-300">
                 {estados.length} selecionado(s)
               </span>
             </div>
 
             {estadosResumo.length > 0 ? (
-              <div className="filtros-dashboard__selected-states">
+              <div className="mt-2 flex flex-wrap gap-1.5">
                 {estadosResumo.slice(0, 5).map((estado) => (
                   <button
                     type="button"
                     key={estado}
-                    className="filtros-dashboard__selected-state"
                     onClick={() => removerEstado(estado)}
                     aria-label={`Remover ${estado} da seleção`}
                     title={`Remover ${estado}`}
+                    className="inline-flex items-center gap-1 rounded-full bg-brand-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-brand-700"
                   >
                     {estado}
                     <span aria-hidden="true">×</span>
@@ -94,61 +95,56 @@ function FiltrosDashboard({
                 ))}
 
                 {estadosResumo.length > 5 && (
-                  <span className="filtros-dashboard__more-states">
+                  <span className="inline-flex items-center px-1 text-xs font-medium text-slate-500 dark:text-slate-400">
                     +{estadosResumo.length - 5}
                   </span>
                 )}
               </div>
             ) : (
-              <span className="filtros-dashboard__no-state">
+              <span className="mt-2 block text-xs text-slate-400 dark:text-slate-500">
                 Nenhum estado selecionado
               </span>
             )}
           </div>
 
-          <div className="filtros-dashboard__summary-card">
+          <div>
             <label
-              className="filtros-dashboard__summary-label"
               htmlFor="filtro-nota-matematica"
+              className="mb-1.5 block text-xs font-semibold text-slate-500 dark:text-slate-400"
             >
               Nota Matemática
             </label>
 
             <input
               id="filtro-nota-matematica"
-              className="filtros-dashboard__summary-input filtros-dashboard__summary-input--center"
+              className={campoSelectClasses}
               type="number"
               min="0"
               max="1000"
               step="1"
               placeholder="Qualquer nota"
               value={notaMatematica}
-              onChange={(event) =>
-                setNotaMatematica(event.target.value)
-              }
+              onChange={(event) => setNotaMatematica(event.target.value)}
             />
           </div>
         </div>
       </div>
 
-      <div className="filtros-dashboard__map-section">
-        <div className="filtros-dashboard__map-heading">
-          <div>
-            <h2>Seleção de estados</h2>
-            <p>
-              Escolha no mapa as UFs que deseja incluir na análise.
-            </p>
-          </div>
-        </div>
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
+          Seleção de estados
+        </h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          Escolha no mapa as UFs que deseja incluir na análise.
+        </p>
 
-        <MapaBrasil
-          estados={estados}
-          setEstados={setEstados}
-        />
+        <div className="mt-4">
+          <MapaBrasil estados={estados} setEstados={setEstados} />
+        </div>
       </div>
 
-      <div className="filtros-dashboard__footer">
-        <p className="filtros-dashboard__footer-hint">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           {estados.length === 0
             ? 'Selecione ao menos um estado para realizar a consulta.'
             : `${estados.length} estado(s) selecionado(s) para a consulta.`}
@@ -156,9 +152,10 @@ function FiltrosDashboard({
 
         <button
           type="button"
-          className="filtros-dashboard__submit"
           onClick={onConsultar}
           disabled={loading || estados.length === 0}
+          className="w-full rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors
+            hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           {loading ? 'Consultando...' : 'Consultar dados'}
         </button>
