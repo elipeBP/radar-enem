@@ -1,0 +1,260 @@
+
+.faixa-etaria {
+  width: 100%;
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-card, 12px);
+  background: var(--color-surface, #fff);
+  color: var(--color-text-primary, #0f172a);
+}
+
+.faixa-etaria__cabecalho {
+  margin-bottom: 24px;
+}
+
+.faixa-etaria__identificador {
+  margin: 0 0 8px;
+  color: var(--color-primary, #2563eb);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.faixa-etaria__titulo {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.3;
+}
+
+.faixa-etaria__descricao {
+  max-width: 720px;
+  margin: 10px 0 0;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.faixa-etaria__formulario {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 24px;
+}
+
+.faixa-etaria__campo {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.faixa-etaria__campo label {
+  color: var(--color-text-primary, #0f172a);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.faixa-etaria__campo select,
+.faixa-etaria__campo input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border, #cbd5e1);
+  border-radius: var(--radius-input, 8px);
+  background: var(--color-surface, #fff);
+  color: var(--color-text-primary, #0f172a);
+}
+
+.faixa-etaria__campo select:focus,
+.faixa-etaria__campo input:focus {
+  outline: 2px solid var(--color-primary, #2563eb);
+  outline-offset: 2px;
+}
+
+.faixa-etaria__botao {
+  min-height: 44px;
+  padding: 11px 18px;
+  border: 0;
+  border-radius: var(--radius-input, 8px);
+  background: var(--color-primary, #2563eb);
+  color: #fff;
+  font-weight: 650;
+  transition: background 0.2s ease;
+}
+
+.faixa-etaria__botao:hover:not(:disabled) {
+  background: var(--color-primary-hover, #1d4ed8);
+}
+
+.faixa-etaria__botao:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.faixa-etaria__mensagem {
+  margin: 16px 0;
+  padding: 14px 16px;
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+.faixa-etaria__mensagem p {
+  margin: 5px 0 0;
+}
+
+.faixa-etaria__mensagem--erro {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.faixa-etaria__carregando {
+  color: var(--color-text-secondary, #64748b);
+}
+
+.faixa-etaria__resultados {
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid var(--color-border, #e2e8f0);
+}
+
+.faixa-etaria__resultados-cabecalho {
+  margin-bottom: 16px;
+}
+
+.faixa-etaria__resultados-cabecalho h3 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.faixa-etaria__resultados-cabecalho p {
+  margin: 7px 0 0;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 0.875rem;
+}
+
+.faixa-etaria__cartoes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.faixa-etaria__cartao {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 10px;
+  background: var(--color-surface-secondary, #f8fafc);
+}
+
+.faixa-etaria__rotulo {
+  display: block;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.faixa-etaria__valor {
+  display: block;
+  margin-top: 10px;
+  overflow-wrap: anywhere;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.2;
+}
+
+.faixa-etaria__cartao p {
+  margin: 10px 0 0;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 0.825rem;
+  line-height: 1.5;
+}
+
+.faixa-etaria__composicao h4 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.faixa-etaria__composicao-legenda {
+  margin: 0 0 16px;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 0.825rem;
+}
+
+.faixa-etaria__barras {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.faixa-etaria__barra-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.faixa-etaria__barra-rotulo {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--color-text-primary, #0f172a);
+}
+
+.faixa-etaria__barra-trilho {
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--color-surface-secondary, #f1f5f9);
+  overflow: hidden;
+}
+
+.faixa-etaria__barra-preenchimento {
+  height: 100%;
+  min-width: 2px;
+  border-radius: 999px;
+  background: var(--color-primary, #2563eb);
+  transition: width 0.3s ease;
+}
+
+.faixa-etaria__metodologia {
+  margin: 22px 0 0;
+  color: var(--color-text-secondary, #64748b);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+@media (min-width: 640px) {
+  .faixa-etaria__formulario {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .faixa-etaria__botao {
+    grid-column: 1 / -1;
+  }
+
+  .faixa-etaria__cartoes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1000px) {
+  .faixa-etaria__formulario {
+    grid-template-columns: 0.7fr 1.4fr auto;
+  }
+
+  .faixa-etaria__botao {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .faixa-etaria {
+    padding: 17px;
+  }
+}

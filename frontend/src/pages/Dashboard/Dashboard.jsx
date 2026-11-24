@@ -5,6 +5,7 @@ import StatusBadge from '../../components/StatusBadge/statusBadge';
 import ResultadoGenero from '../../components/ResultadoGenero/ResultadoGenero';
 import FiltrosDashboard from '../../components/FiltrosDashboard/FiltrosDashboard';
 import NotaUF from '../../components/NotaUF/NotaUF';
+import FaixaEtaria from '../../components/FaixaEtaria/FaixaEtaria';
 import { checkApiHealth, consultarGenero } from '../../services/api';
 
 import './styles-dashboard/Dashboard.css';
@@ -116,6 +117,8 @@ function Dashboard() {
           </section>
 
           <NotaUF />
+
+          <FaixaEtaria />
         </div>
       </main>
     </div>
