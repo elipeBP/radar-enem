@@ -39,6 +39,8 @@ try:
         RespostaEscola,
         FiltroNotaUF,
         RespostaNotaUF,
+        FiltroIdade,
+        RespostaIdade,
     )
 except ImportError:
     # Funciona quando você roda a partir da raiz de Backend/:
@@ -52,6 +54,8 @@ except ImportError:
         RespostaEscola,
         FiltroNotaUF,
         RespostaNotaUF,
+        FiltroIdade,
+        RespostaIdade,
     )
 
 # core/escola.py e core/nota_uf.py vivem fora de api/. Suportam os dois modos
@@ -75,6 +79,11 @@ try:
         DadosIndisponiveisError as DadosIndisponiveisErrorNotaUF,
         UFsemDadosError as UFsemDadosErrorNotaUF,
     )
+    from core.faixa_etaria import (
+        analisar_faixa_etaria,
+        DadosIndisponiveisError as DadosIndisponiveisErrorIdade,
+        UFsemDadosError as UFsemDadosErrorIdade,
+    )
 except ImportError:  # pragma: no cover
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from core.escola import (
@@ -86,6 +95,11 @@ except ImportError:  # pragma: no cover
         analisar_nota_uf,
         DadosIndisponiveisError as DadosIndisponiveisErrorNotaUF,
         UFsemDadosError as UFsemDadosErrorNotaUF,
+    )
+    from core.faixa_etaria import (
+        analisar_faixa_etaria,
+        DadosIndisponiveisError as DadosIndisponiveisErrorIdade,
+        UFsemDadosError as UFsemDadosErrorIdade,
     )
 
 from core.dados import DadosIndisponiveisError, carregar_dados_genero
@@ -254,6 +268,41 @@ def analise_nota_uf(filtros: FiltroNotaUF):
     return RespostaNotaUF(
         status="success",
         mensagem="Análise estatística calculada com os dados de referência do ENEM 2025.",
+        dados=dados,
+    )
+
+
+@app.post("/api/dados/idade", response_model=RespostaIdade)
+def analise_faixa_etaria(filtros: FiltroIdade):
+    """
+    Rota do Filtro 5 — Faixa Etária (issue #52).
+
+    Calcula, para a UF informada, duas análises INDEPENDENTES, sem junção
+    entre elas (mesma arquitetura da Trilha de Gênero):
+      A) o percentil/Z-Score da nota de Matemática do usuário entre as
+         notas válidas da UF (fonte RESULTADOS);
+      B) a composição por faixa etária dos inscritos da UF, nos 20
+         códigos oficiais de TP_FAIXA_ETARIA (fonte PARTICIPANTES).
+
+    Mapeamento de erros:
+      - 422: entrada inválida (tratado automaticamente pelo FastAPI/Pydantic);
+      - 404: a UF não tem registros/notas utilizáveis na base de referência;
+      - 503: os Parquets de referência estão ausentes, corrompidos ou sem as
+             colunas necessárias (problema de dados no servidor, não do cliente).
+    """
+    try:
+        dados = analisar_faixa_etaria(
+            estado=filtros.estado,
+            nota_matematica=filtros.nota_matematica,
+        )
+    except UFsemDadosErrorIdade as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except DadosIndisponiveisErrorIdade as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    return RespostaIdade(
+        status="success",
+        mensagem="Análise por faixa etária calculada com os microdados de referência do ENEM 2025.",
         dados=dados,
     )
 
